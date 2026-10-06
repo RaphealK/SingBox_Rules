@@ -56,7 +56,7 @@
     "reverse_mapping": true
   },
   "outbounds": [
-    {"tag": "🌍 Proxy", "type": "selector", "outbounds": []},
+    {"tag": "🌍 Proxy", "type": "selector", "outbounds": ["🎯 Direct"]},
     {"tag": "🤖 AI", "type": "selector", "outbounds": ["🌍 Proxy", "🎯 Direct"]},
     {"tag": "📹 YouTube", "type": "selector", "outbounds": ["🌍 Proxy", "🎯 Direct"]},
     {"tag": "🔍 Google", "type": "selector", "outbounds": ["🌍 Proxy", "🎯 Direct"]},

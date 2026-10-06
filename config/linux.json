@@ -158,7 +158,7 @@
           "100.64.0.0/10",
           "fd7a:115c:a1e0::/48"
         ],
-        "outbound": "🎯 Direct"
+        "outbound": "tailscale-ep"
       },
       {
         "ip_is_private": true,
@@ -180,20 +180,7 @@
       {"clash_mode": "Global", "outbound": "🌐 Global"},
       {"rule_set": "BlockAD", "action": "reject"},
       {"protocol": ["ssh", "bittorrent"], "outbound": "🎯 Direct"},
-      {
-        "domain_keyword": [
-          "raphaelk.asia",
-          "luokinging",
-          "chinacdi",
-          "cdqp",
-          "stun",
-          "rustdesk",
-          "speedtest",
-          "ip.sb",
-          "myip.la"
-        ],
-        "outbound": "🎯 Direct"
-      },
+
       {"rule_set": "geosite-private", "outbound": "🎯 Direct"},
       {"rule_set": ["geosite-apple", "geosite-apple@cn"], "outbound": "🎯 Direct"},
       {"rule_set": "geosite-category-ai-!cn", "outbound": "🤖 AI"},
@@ -299,6 +286,16 @@
       "type": "mixed",
       "listen": "0.0.0.0",
       "listen_port": 7890
+    }
+  ],
+  "endpoints": [
+    {
+      "type": "tailscale",
+      "tag": "tailscale-ep",
+      "control_url": "https://your-headscale-domain.com",
+      "auth_key": "tskey-auth-xxxxxxxxxxxx",
+      "hostname": "linux-singbox",
+      "accept_routes": true
     }
   ],
   "services": [

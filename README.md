@@ -85,9 +85,31 @@ https://gh-proxy.com/https://raw.githubusercontent.com/xream/scripts/main/surge/
 - `🕳ℹ️策略组名称🏷ℹ️正则表达式`：用于将匹配的节点注入对应策略组，如需排除或包含自建节点，可按需调整正则中的 `(?!.*(?:ZJ|zijian|自建))` 条件。
 
 > [!TIP]
-> **OpenWrt 端 Sub-Store 节点注入参考（支持业务组独立选节点）**：
-> OpenWrt 配置已精简为 Emoji 英文命名，若希望 `🌍 Proxy` 拥有全部节点，且 `🤖 AI`、`📹 YouTube`、`🔍 Google` 等业务组也能单独点选具体节点，可在 Sub-Store 模板参数中指定：
+> **四端 Sub-Store 节点注入参考（支持业务组独立选节点）**：
+> 当前配置已精简为统一 Emoji 英文命名，若希望 `🌍 Proxy` 拥有全部节点，且 `🤖 AI`、`📹 YouTube`、`🔍 Google` 等业务组也能单独点选具体节点，可在 Sub-Store 模板参数中指定：
 > ```text
 > #outbound=🕳ℹ️🌍 Proxy|🤖 AI|📹 YouTube|🔍 Google|🐙 GitHub|✈️ Telegram|💳 Wallet|🎮 Steam|Ⓜ️ Microsoft|☁️ OneDrive🏷ℹ️^(?!.*(?:官网|剩余|流量|套餐|免费|订阅|到期时间|直连|GB|Expire Date|Traffic|ExpireDate)).*
 > ```
 > 这样在 Web 面板中，每个业务组既能默认选择跟随 `🌍 Proxy`，也能直接勾选某个特定国家或线路的独立节点。
+
+---
+
+## 5. Sub-Store 动态配置 Tailscale / Headscale Endpoint 脚本
+
+为避免在客户端配置文件中明文写死自建 Headscale 地址与认证密钥，本仓库提供了专属的处理脚本 [`scripts/substore-endpoint.js`](file:///d:/Git/SingBox_Rules/scripts/substore-endpoint.js)。
+
+### 使用方法
+在 Sub-Store 的【订阅产物 (Artifact)】中，为对应 Sing-box 配置添加该脚本作为处理脚本，并通过 URL Hash 传递你的私有配置参数：
+
+```text
+https://gh-proxy.com/https://raw.githubusercontent.com/RaphealK/SingBox_Rules/main/scripts/substore-endpoint.js#control_url=https://headscale.yourdomain.com&auth_key=tskey-auth-xxxxxx&hostname=iphone-box&accept_routes=true
+```
+
+### 脚本参数说明
+- `control_url`: 你的 Headscale 控制面完整地址（例如 `https://headscale.yourdomain.com`）
+- `auth_key`: Headscale 预授权 Key（可选，填入后免手动验证登录）
+- `hostname`: 节点在控制面板显示的名称（如 `iphone-box`, `windows-pc`）
+- `accept_routes`: 是否接受子网路由广播（默认 `true`）
+- `tag`: Endpoint 标签名（默认 `tailscale-ep`）
+
+> **自动特性**：该脚本在注入 Tailscale Endpoint 的同时，会自动将你传入的 Headscale 域名补充进控制面分流规则中，并确保虚拟内网 `100.64.0.0/10` 精准绑定到该端点。

@@ -180,20 +180,7 @@
       {"clash_mode": "Global", "outbound": "🌐 Global"},
       {"rule_set": "BlockAD", "action": "reject"},
       {"protocol": ["ssh", "bittorrent"], "outbound": "🎯 Direct"},
-      {
-        "domain_keyword": [
-          "raphaelk.asia",
-          "luokinging",
-          "chinacdi",
-          "cdqp",
-          "stun",
-          "rustdesk",
-          "speedtest",
-          "ip.sb",
-          "myip.la"
-        ],
-        "outbound": "🎯 Direct"
-      },
+
       {"rule_set": "geosite-private", "outbound": "🎯 Direct"},
       {"rule_set": ["geosite-apple", "geosite-apple@cn"], "outbound": "🎯 Direct"},
       {"rule_set": "geosite-category-ai-!cn", "outbound": "🤖 AI"},

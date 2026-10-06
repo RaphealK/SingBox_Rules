@@ -1,0 +1,341 @@
+{
+  "$schema": "https://sing-box.sagernet.org/schema.json",
+  "dns": {
+    "servers": [
+      {"tag": "local", "type": "local", "prefer_go": true},
+      {"tag": "ali", "type": "h3", "server": "223.5.5.5"},
+      {"tag": "tx", "type": "https", "server": "doh.pub", "domain_resolver": "hosts"},
+      {"tag": "google", "type": "https", "server": "8.8.8.8", "detour": "🌍 Proxy"},
+      {
+        "tag": "fakeip",
+        "type": "fakeip",
+        "inet4_range": "198.19.0.0/16",
+        "inet6_range": "fc00::/18"
+      },
+      {"type": "hosts", "tag": "hosts", "predefined": {"doh.pub": ["1.12.12.21", "120.53.53.53"]}}
+    ],
+    "rules": [
+      {"query_type": ["HTTPS", "SVCB"], "action": "reject"},
+      {"clash_mode": "Direct", "server": "ali"},
+      {"clash_mode": "Global", "server": "fakeip"},
+      {"rule_set": "BlockAD", "action": "reject"},
+      {
+        "rule_set": [
+          "fakeipfilter-cn",
+          "geosite-cn",
+          "geosite-microsoft@cn",
+          "geosite-apple@cn",
+          "geosite-apple",
+          "geosite-private",
+          "geosite-category-games@cn",
+          "geosite-steam@cn",
+          "Game"
+        ],
+        "server": "ali"
+      },
+      {"rule_set": "fakeipfilter-!cn", "server": "google"},
+      {
+        "type": "logical",
+        "mode": "and",
+        "rules": [
+          {"query_type": ["A", "AAAA"]},
+          {"rule_set": "geosite-geolocation-!cn", "invert": true}
+        ],
+        "action": "evaluate",
+        "server": "google",
+        "client_subnet": "223.5.5.0/24",
+        "timeout": "2s"
+      },
+      {"match_response": true, "rule_set": "geoip-cn", "server": "ali"},
+      {"query_type": ["A", "AAAA"], "server": "fakeip", "rewrite_ttl": 1}
+    ],
+    "final": "google",
+    "strategy": "prefer_ipv4",
+    "cache_capacity": 8192,
+    "optimistic": {"enabled": true},
+    "reverse_mapping": true
+  },
+  "outbounds": [
+    {"tag": "🌍 Proxy", "type": "selector", "outbounds": []},
+    {"tag": "🤖 AI", "type": "selector", "outbounds": ["🌍 Proxy", "🎯 Direct"]},
+    {"tag": "📹 YouTube", "type": "selector", "outbounds": ["🌍 Proxy", "🎯 Direct"]},
+    {"tag": "🔍 Google", "type": "selector", "outbounds": ["🌍 Proxy", "🎯 Direct"]},
+    {"tag": "🐙 GitHub", "type": "selector", "outbounds": ["🌍 Proxy", "🎯 Direct"]},
+    {"tag": "✈️ Telegram", "type": "selector", "outbounds": ["🌍 Proxy", "🎯 Direct"]},
+    {"tag": "💳 Wallet", "type": "selector", "outbounds": ["🌍 Proxy", "🎯 Direct"]},
+    {"tag": "🎮 Steam", "type": "selector", "outbounds": ["🌍 Proxy", "🎯 Direct"]},
+    {"tag": "Ⓜ️ Microsoft", "type": "selector", "outbounds": ["🎯 Direct", "🌍 Proxy"]},
+    {"tag": "☁️ OneDrive", "type": "selector", "outbounds": ["🎯 Direct", "🌍 Proxy"]},
+    {
+      "tag": "⚡ Baseline",
+      "type": "urltest",
+      "outbounds": ["🎯 Direct"],
+      "url": "http://connect.rom.miui.com/generate_204",
+      "interval": "30m"
+    },
+    {
+      "tag": "🌐 Global",
+      "type": "selector",
+      "outbounds": [
+        "🌍 Proxy",
+        "🤖 AI",
+        "📹 YouTube",
+        "🔍 Google",
+        "🐙 GitHub",
+        "✈️ Telegram",
+        "💳 Wallet",
+        "🎮 Steam",
+        "Ⓜ️ Microsoft",
+        "☁️ OneDrive",
+        "⚡ Baseline",
+        "🎯 Direct"
+      ]
+    },
+    {"tag": "🎯 Direct", "type": "direct", "domain_resolver": "ali"}
+  ],
+  "http_clients": [
+    {"tag": "直连下载", "detour": "🎯 Direct"}
+  ],
+  "route": {
+    "rules": [
+      {
+        "type": "logical",
+        "mode": "and",
+        "rules": [
+          {"port": [53, 853], "invert": true},
+          {"clash_mode": "Global", "invert": true},
+          {
+            "type": "logical",
+            "mode": "or",
+            "rules": [
+              {"ip_is_private": true},
+              {"ip_cidr": ["100.64.0.0/10", "fd7a:115c:a1e0::/48"]},
+              {"rule_set": "geoip-cn"}
+            ]
+          }
+        ],
+        "action": "bypass"
+      },
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {"domain_suffix": "push.apple.com"},
+          {"rule_set": "geoip-telegram"}
+        ],
+        "invert": true,
+        "action": "sniff",
+        "sniffer": ["http", "tls", "stun", "quic", "dns"],
+        "timeout": "100ms"
+      },
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {"port": 53},
+          {"protocol": "dns"}
+        ],
+        "action": "hijack-dns"
+      },
+      {
+        "domain": [
+          "your-headscale-domain.com",
+          "controlplane.tailscale.com",
+          "login.tailscale.com",
+          "logs.tailscale.com"
+        ],
+        "outbound": "🌍 Proxy"
+      },
+      {
+        "process_name": [
+          "tailscaled",
+          "tailscale"
+        ],
+        "outbound": "🎯 Direct"
+      },
+      {
+        "ip_cidr": [
+          "100.64.0.0/10",
+          "fd7a:115c:a1e0::/48"
+        ],
+        "outbound": "🎯 Direct"
+      },
+      {
+        "ip_is_private": true,
+        "outbound": "🎯 Direct"
+      },
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {"port": 853},
+          {"protocol": ["stun", "quic"]}
+        ],
+        "action": "reject",
+        "no_drop": true
+      },
+      {"network": "icmp", "action": "resolve"},
+      {"network": "icmp", "outbound": "🎯 Direct"},
+      {"clash_mode": "Direct", "outbound": "🎯 Direct"},
+      {"clash_mode": "Global", "outbound": "🌐 Global"},
+      {"rule_set": "BlockAD", "action": "reject"},
+      {"protocol": ["ssh", "bittorrent"], "outbound": "🎯 Direct"},
+      {
+        "domain_keyword": [
+          "raphaelk.asia",
+          "luokinging",
+          "chinacdi",
+          "cdqp",
+          "stun",
+          "rustdesk",
+          "speedtest",
+          "ip.sb",
+          "myip.la"
+        ],
+        "outbound": "🎯 Direct"
+      },
+      {"rule_set": "geosite-private", "outbound": "🎯 Direct"},
+      {"rule_set": ["geosite-apple", "geosite-apple@cn"], "outbound": "🎯 Direct"},
+      {"rule_set": "geosite-category-ai-!cn", "outbound": "🤖 AI"},
+      {"rule_set": "geosite-youtube", "outbound": "📹 YouTube"},
+      {"rule_set": "geosite-google", "outbound": "🔍 Google"},
+      {"rule_set": "geosite-github", "outbound": "🐙 GitHub"},
+      {"rule_set": "geosite-onedrive", "outbound": "☁️ OneDrive"},
+      {"rule_set": "geosite-microsoft@cn", "outbound": "🎯 Direct"},
+      {"rule_set": "geosite-microsoft", "outbound": "Ⓜ️ Microsoft"},
+      {"rule_set": "geosite-telegram", "outbound": "✈️ Telegram"},
+      {"rule_set": "geosite-paypal", "outbound": "💳 Wallet"},
+      {"rule_set": "geosite-binance", "outbound": "💳 Wallet"},
+      {"rule_set": "geosite-okx", "outbound": "💳 Wallet"},
+      {"rule_set": "geosite-category-cryptocurrency", "outbound": "💳 Wallet"},
+      {"rule_set": ["geosite-category-games@cn", "geosite-steam@cn"], "outbound": "🎯 Direct"},
+      {"rule_set": "Game", "outbound": "🎯 Direct"},
+      {"rule_set": "geosite-steam", "outbound": "🎮 Steam"},
+      {"rule_set": "geosite-geolocation-!cn", "outbound": "🌍 Proxy"},
+      {"inbound": "mixed-in", "action": "resolve"},
+      {"rule_set": "geoip-telegram", "outbound": "✈️ Telegram"},
+      {"rule_set": "geoip-cn", "outbound": "🎯 Direct"}
+    ],
+    "rule_set": [
+      {
+        "tag": [
+          "fakeipfilter-cn",
+          "fakeipfilter-!cn"
+        ],
+        "type": "remote",
+        "format": "source",
+        "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qichiyuhub/rule/refs/heads/main/rules/{tag}.json"
+      },
+      {
+        "tag": [
+          "geosite-category-ai-!cn",
+          "geosite-youtube",
+          "geosite-google",
+          "geosite-github",
+          "geosite-onedrive",
+          "geosite-microsoft",
+          "geosite-microsoft@cn",
+          "geosite-apple",
+          "geosite-apple@cn",
+          "geosite-telegram",
+          "geosite-paypal",
+          "geosite-binance",
+          "geosite-okx",
+          "geosite-category-cryptocurrency",
+          "geosite-steam@cn",
+          "geosite-steam",
+          "geosite-category-games@cn",
+          "geosite-geolocation-!cn",
+          "geosite-cn",
+          "geosite-private"
+        ],
+        "type": "remote",
+        "format": "binary",
+        "url": "https://gh-proxy.com/https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/{tag}.srs"
+      },
+      {
+        "tag": "geoip-telegram",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://gh-proxy.com/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geoip/telegram.srs"
+      },
+      {
+        "tag": "geoip-cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://gh-proxy.com/https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-cn.srs"
+      },
+      {
+        "tag": "BlockAD",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://gcore.jsdelivr.net/gh/217heidai/adblockfilters@main/rules/adblocksingbox.srs"
+      },
+      {
+        "tag": "Game",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://gh-proxy.com/https://raw.githubusercontent.com/senshinya/singbox_ruleset/refs/heads/main/rule/Game/Game.srs"
+      }
+    ],
+    "final": "🌍 Proxy",
+    "default_http_client": "直连下载",
+    "auto_detect_interface": true,
+    "default_domain_resolver": {"server": "ali"}
+  },
+  "inbounds": [
+    {
+      "tag": "tun-in",
+      "type": "tun",
+      "address": [
+        "172.19.0.1/30",
+        "fdfe:dcba:9876::1/126"
+      ],
+      "auto_route": true,
+      "auto_redirect": true
+    },
+    {
+      "tag": "mixed-in",
+      "type": "mixed",
+      "listen": "0.0.0.0",
+      "listen_port": 7890
+    }
+  ],
+  "services": [
+    {
+      "type": "api",
+      "listen": "0.0.0.0",
+      "listen_port": 7714,
+      "secret": "passwd",
+      "dashboard": {
+        "enabled": true,
+        "path": "/etc/sing-box/dashboard"
+      }
+    }
+  ],
+  "experimental": {
+    "cache_file": {
+      "enabled": true,
+      "path": "/etc/sing-box/cache.db",
+      "store_dns": true
+    },
+    "clash_api": {
+      "external_controller": "0.0.0.0:9095",
+      "external_ui": "/etc/sing-box/ui",
+      "secret": "passwd",
+      "default_mode": "Rule"
+    }
+  },
+  "certificate": {
+    "store": "chrome"
+  },
+  "ntp": {
+    "enabled": true,
+    "server": "time.apple.com"
+  },
+  "log": {
+    "disabled": false,
+    "level": "info",
+    "timestamp": true
+  }
+}

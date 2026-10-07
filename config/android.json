@@ -2,6 +2,7 @@
   "$schema": "https://sing-box.sagernet.org/schema.json",
   "dns": {
     "servers": [
+      {"tag": "router-dns", "type": "udp", "server": "192.168.31.1", "detour": "🎯 Direct"},
       {"tag": "local", "type": "local", "prefer_go": true},
       {"tag": "ali", "type": "h3", "server": "223.5.5.5"},
       {"tag": "tx", "type": "https", "server": "doh.pub", "domain_resolver": "hosts"},
@@ -16,7 +17,7 @@
     ],
     "rules": [
       {"query_type": ["HTTPS", "SVCB"], "action": "reject"},
-      {"wifi_ssid": ["KsRouter", "KsRouter-5G"], "server": "local"},
+      {"wifi_ssid": ["KsRouter", "KsRouter-5G"], "server": "router-dns"},
       {"clash_mode": "Direct", "server": "local"},
       {"clash_mode": "Global", "server": "fakeip"},
       {"rule_set": "BlockAD", "action": "reject"},
@@ -144,7 +145,7 @@
           "KsRouter",
           "KsRouter-5G"
         ],
-        "action": "bypass"
+        "outbound": "🎯 Direct"
       },
       {
         "domain": [

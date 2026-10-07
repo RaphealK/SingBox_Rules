@@ -2,7 +2,7 @@
   "$schema": "https://sing-box.sagernet.org/schema.json",
   "dns": {
     "servers": [
-      {"tag": "local", "type": "local", "prefer_go": true},
+      {"tag": "local", "type": "local"},
       {"tag": "ali", "type": "h3", "server": "223.5.5.5"},
       {"tag": "tx", "type": "https", "server": "doh.pub", "domain_resolver": "hosts"},
       {"tag": "google", "type": "https", "server": "8.8.8.8", "detour": "🌍 Proxy"},
@@ -93,7 +93,7 @@
         "🎯 Direct"
       ]
     },
-    {"tag": "🎯 Direct", "type": "direct", "domain_resolver": "ali"}
+    {"tag": "🎯 Direct", "type": "direct", "domain_resolver": "local"}
   ],
   "http_clients": [
     {"tag": "直连下载", "detour": "🎯 Direct"}
@@ -252,7 +252,7 @@
     "final": "🌍 Proxy",
     "default_http_client": "直连下载",
     "auto_detect_interface": true,
-    "default_domain_resolver": {"server": "ali"}
+    "default_domain_resolver": {"server": "local"}
   },
   "inbounds": [
     {
@@ -262,14 +262,7 @@
         "172.19.0.1/30",
         "fdfe:dcba:9876::1/126"
       ],
-      "auto_route": true,
-      "platform": {
-        "http_proxy": {
-          "enabled": true,
-          "server": "127.0.0.1",
-          "server_port": 7890
-        }
-      }
+      "auto_route": true
     },
     {
       "tag": "mixed-in",

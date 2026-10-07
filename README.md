@@ -1,6 +1,6 @@
 # Sing-Box 配置与分流规则维护参考
 
-本仓库维护适用于 **Sing-Box 官方内核（1.14+）** 的四端（Windows / Linux / OpenWrt / iPhone）配置与配套 FakeIP 过滤规则集。
+本仓库维护适用于 **Sing-Box 官方内核（1.14+）** 的五端（Windows / Linux / OpenWrt / Android / iPhone）配置与配套 FakeIP 过滤规则集。
 
 ---
 
@@ -8,44 +8,48 @@
 
 ```text
 ├── config/
-│   ├── windows.json          # Windows 桌面端配置
-│   ├── linux.json            # Linux 桌面/旁路由端配置
+│   ├── windows.json          # Windows 桌面端配置（支持 Bridge 驱动级直连）
+│   ├── linux.json            # Linux 桌面/旁路由端配置（支持内核级 action: bypass）
 │   ├── openwrt.json          # OpenWrt 路由器配置（含 Tailscale/BlockAD/Game 等专属规则）
-│   └── iphone.json           # iPhone / iPad 移动端配置
+│   ├── android.json          # Android 移动端配置（针对 Root 设备，支持内核 bypass + App 包名分流）
+│   └── iphone.json           # iPhone / iPad 移动端配置（适配 iOS 沙盒与原生 Headscale 端点）
 ├── rules/
-│   ├── fakeipfilter-cn.json  # 国内 FakeIP 过滤规则集（走 ali DoH 解析真实 IP）
+│   ├── fakeipfilter-cn.json  # 国内 FakeIP 过滤规则集（走 ali H3 解析真实 IP）
 │   └── fakeipfilter-!cn.json # 海外 FakeIP 过滤规则集（走 google DoH 解析真实 IP）
+├── scripts/
+│   └── substore-endpoint.js  # Sub-Store 动态注入 Headscale / Tailscale Endpoint 的专用脚本
 └── README.md                 # 配置差异对照与维护速查文档
 ```
 
 ---
 
-## 2. 四端配置差异速查表
+## 2. 五端配置差异速查表
 
-四端配置的 **`dns` 核心逻辑、`http_clients`、`route.rule_set` 基础集以及核心分流规则一致**，仅在底层网络栈适配、后台管理服务与特有分流规则上存在平台差异：
+五端配置的 **`dns` 核心逻辑、`http_clients`、`route.rule_set` 基础集以及核心分流规则一致**，仅在底层网络栈适配、后台管理服务与特有分流规则上存在平台差异：
 
-| 模块 / 配置项 | `windows.json` (Windows) | `linux.json` (Linux) | `openwrt.json` (OpenWrt) | `iphone.json` (iPhone) |
-| :--- | :--- | :--- | :--- | :--- |
-| **特殊出站 (`outbounds`)** | 额外包含 `🌉 Bridge` (bridge) | 无 | 无 | 无 |
-| **首条路由 (`route.rules[0]`)** | `preferred_by: ["🌉 Bridge"]` 走桥接（含内网/Tailscale/国内 IP） | 非全局模式下私有/Tailscale/国内 IP `bypass` | 非全局模式下私有/Tailscale/国内 IP `bypass` | 无（直接从 sniff 开始） |
-| **TUN 入站** | `platform.http_proxy` (`127.0.0.1:7890`) | `auto_redirect: true` | `auto_redirect: true` | `platform.http_proxy` (`127.0.0.1:7890`) |
-| **混合入站** | `0.0.0.0:7890` | `0.0.0.0:7890` | `0.0.0.0:7890` | `127.0.0.1:7890` |
-| **API 服务** | `0.0.0.0:9090`，路径 `"dashboard"` | `0.0.0.0:9090`，路径 `"/etc/sing-box/dashboard"` | `0.0.0.0:7714`，路径 `"/etc/sing-box/dashboard"` | 无（由 iOS 客户端接管） |
-| **Clash API** | 无 | `0.0.0.0:9095` | `0.0.0.0:9095` | 无 |
-| **缓存文件** | `store_dns: true` | `path: /etc/sing-box/cache.db`, `store_dns: true` | `path: /etc/sing-box/cache.db`, `store_dns: true` | 仅 `enabled: true` |
-| **NTP 同步** | 启用 (`time.apple.com`) | 启用 (`time.apple.com`) | 启用 (`time.apple.com`) | 无 |
-| **Headscale / Tailscale** | ✅ 控制面域名 + Windows 进程直连 + CGNAT 内网直连 | ✅ 控制面域名 + Linux 进程直连 + 内核 bypass | ✅ 控制面域名 + 路由进程直连 + 内核 bypass | ✅ 控制面域名 + CGNAT 内网直连 |
-| **策略组命名风格** | **统一 Emoji + 英文**（支持各业务组独立选节点） | **统一 Emoji + 英文**（支持各业务组独立选节点） | **统一 Emoji + 英文**（支持各业务组独立选节点） | **统一 Emoji + 英文**（支持各业务组独立选节点） |
-| **DNS 架构** | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 |
-| **Game & Steam 规则** | **三层优化**（国服/下载直连，联机直连，社区/商店代理） | **三层优化**（国服/下载直连，联机直连，社区/商店代理） | **三层优化**（国服/下载直连，联机直连，社区/商店代理） | **三层优化**（国服/下载直连，联机直连，社区/商店代理） |
-| **Apple 服务** | 统一直连（`🎯 Direct`） | 统一直连（`🎯 Direct`） | 统一直连（`🎯 Direct`） | 统一直连（`🎯 Direct`） |
-| **家庭透明代理 Wi-Fi 联动** | 连接 `KsRouter / KsRouter-5G` 时 DNS 切 DHCP (local)，全量走 `🌉 Bridge` 驱动级直连 | 连接 `KsRouter / KsRouter-5G` 时 DNS 切 DHCP (local)，全量内核级 `action: "bypass"` 直通 | 本机即为透明代理宿主机 | 连接 `KsRouter / KsRouter-5G` 时 DNS 切 DHCP (local)，全量走 `🎯 Direct` 直连 |
+| 模块 / 配置项 | `windows.json` (Windows) | `linux.json` (Linux) | `openwrt.json` (OpenWrt) | `android.json` (Android Root) | `iphone.json` (iPhone) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **特殊出站 (`outbounds`)** | 额外包含 `🌉 Bridge` (bridge) | 无 | 无 | 无 | 无 |
+| **首条路由 (`route.rules[0]`)** | `preferred_by: ["🌉 Bridge"]` 走桥接（含内网/国内 IP） | 非全局模式下私有/Tailscale/国内 IP `bypass` | 非全局模式下私有/Tailscale/国内 IP `bypass` | 非全局模式下私有/Tailscale/国内 IP `bypass` | 无（直接从 sniff 开始） |
+| **TUN 入站** | `platform.http_proxy` (`127.0.0.1:7890`) | `auto_redirect: true` | `auto_redirect: true` | `auto_redirect: true` (支持 Root 内核重定向) | `platform.http_proxy` (`127.0.0.1:7890`) |
+| **混合入站** | `0.0.0.0:7890` | `0.0.0.0:7890` | `0.0.0.0:7890` | `127.0.0.1:7890`（移动安全绑定） | `127.0.0.1:7890`（移动安全绑定） |
+| **API 服务** | `0.0.0.0:9090`，路径 `"dashboard"` | `0.0.0.0:9090`，路径 `"/etc/sing-box/dashboard"` | `0.0.0.0:7714`，路径 `"/etc/sing-box/dashboard"` | 无（由安卓客户端 UI 接管） | 无（由 iOS 客户端接管） |
+| **Clash API** | 无 | `0.0.0.0:9095` | `0.0.0.0:9095` | 无 | 无 |
+| **缓存文件** | `store_dns: true` | `path: /etc/sing-box/cache.db`, `store_dns: true` | `path: /etc/sing-box/cache.db`, `store_dns: true` | 仅 `enabled: true` | 仅 `enabled: true` |
+| **NTP 同步** | 启用 (`time.apple.com`) | 启用 (`time.apple.com`) | 启用 (`time.apple.com`) | 无 | 无 |
+| **Headscale / Tailscale** | ✅ 原生端点 (`windows-singbox`) | ✅ 原生端点 (`linux-singbox`) | ✅ 路由进程直连 + 内核 bypass | ✅ 原生端点 (`android-singbox`) | ✅ 原生端点 (`iphone-singbox`) |
+| **应用包名分流 (`package_name`)** | 无 | 无 | 无 | ✅ 微信/支付宝/网银/高德 App 强制直连防风控 | 无（iOS 系统沙盒限制） |
+| **策略组命名风格** | **统一 Emoji + 英文**（支持各业务组独立选节点） | **统一 Emoji + 英文**（支持各业务组独立选节点） | **统一 Emoji + 英文**（支持各业务组独立选节点） | **统一 Emoji + 英文**（支持各业务组独立选节点） | **统一 Emoji + 英文**（支持各业务组独立选节点） |
+| **DNS 架构** | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 |
+| **Game & Steam 规则** | **三层优化**（国服/下载直连，联机直连，社区/商店代理） | **三层优化**（国服/下载直连，联机直连，社区/商店代理） | **三层优化**（国服/下载直连，联机直连，社区/商店代理） | **三层优化**（国服/下载直连，联机直连，社区/商店代理） | **三层优化**（国服/下载直连，联机直连，社区/商店代理） |
+| **Apple 服务** | 统一直连（`🎯 Direct`） | 统一直连（`🎯 Direct`） | 统一直连（`🎯 Direct`） | 统一直连（`🎯 Direct`） | 统一直连（`🎯 Direct`） |
+| **家庭透明代理 Wi-Fi 联动** | 连接 `KsRouter` 时 DNS 切 DHCP，走 `🌉 Bridge` 驱动级直连 | 连接 `KsRouter` 时 DNS 切 DHCP，走内核级 `action: "bypass"` | 本机即为透明代理宿主机 | 连接 `KsRouter` 时 DNS 切 DHCP，走内核级 `action: "bypass"` | 连接 `KsRouter` 时 DNS 切 DHCP，走 `🎯 Direct` 直连 |
 
 ---
 
 ## 3. 公共核心架构与日常维护指南
 
-修改以下公共模块时，请保持 `windows.json`、`linux.json`、`openwrt.json`、`iphone.json` 四端同步更新：
+修改以下公共模块时，请保持 `windows.json`、`linux.json`、`openwrt.json`、`android.json`、`iphone.json` 五端同步更新：
 
 ### 3.1 DNS 解析流水线 (`dns`)
 1. **屏蔽 HTTPS/SVCB**：拒绝 `HTTPS` 和 `SVCB` 类型查询，防止客户端绕过分流。

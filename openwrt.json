@@ -43,6 +43,10 @@
     "timeout": "5s",
     "rules": [
       {
+        "clash_mode": "Direct",
+        "server": "dns-local"
+      },
+      {
         "domain_suffix": [
           ".local"
         ],

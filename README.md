@@ -43,7 +43,7 @@
 | **DNS 架构** | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 |
 | **Game & Steam 规则** | **三层优化**（国服/下载直连，联机直连，社区/商店代理） | **三层优化**（国服/下载直连，联机直连，社区/商店代理） | **三层优化**（国服/下载直连，联机直连，社区/商店代理） | **三层优化**（国服/下载直连，联机直连，社区/商店代理） | **三层优化**（国服/下载直连，联机直连，社区/商店代理） |
 | **Apple 服务** | 统一直连（`🎯 Direct`） | 统一直连（`🎯 Direct`） | 统一直连（`🎯 Direct`） | 统一直连（`🎯 Direct`） | 统一直连（`🎯 Direct`） |
-| **家庭透明代理 Wi-Fi 联动** | 连接 `KsRouter` 时 DNS 切 DHCP，走 `🌉 Bridge` 驱动级直连 | 连接 `KsRouter` 时 DNS 切 DHCP，走内核级 `action: "bypass"` | 本机即为透明代理宿主机 | 连接 `KsRouter` 时 DNS 切 DHCP，走内核级 `action: "bypass"` | 连接 `KsRouter` 时 DNS 切 DHCP，走 `🎯 Direct` 直连 |
+| **家庭透明代理与直连模式** | 直连模式（`Direct`）下 DNS 走 `local`（局域网 DHCP），流量走桥接 | 直连模式（`Direct`）下 DNS 走 `local`（局域网 DHCP），流量内核 bypass 直通 | 本机即为透明代理宿主机 | 直连模式（`Direct`）下 DNS 走 `local`（局域网 DHCP），流量内核 bypass 直通 | 直连模式（`Direct`）下 DNS 走 `local`（局域网 DHCP），流量直连 |
 
 ---
 
@@ -53,7 +53,7 @@
 
 ### 3.1 DNS 解析流水线 (`dns`)
 1. **屏蔽 HTTPS/SVCB**：拒绝 `HTTPS` 和 `SVCB` 类型查询，防止客户端绕过分流。
-2. **模式优先**：`Direct` 模式直连 `ali`（`223.5.5.5`），`Global` 模式返回 `fakeip`。
+2. **模式优先**：`Direct` 模式 DNS 默认走 `local`（局域网 DHCP/原生 DNS，不污染不二次转发），`Global` 模式返回 `fakeip`。连入家庭部署透明代理的 Wi-Fi（如 `KsRouter`）时，客户端切换为直连（Direct）模式即可获得最高性能与原生局域网 DNS。
 3. **FakeIP 过滤**：
    - 命中 `fakeipfilter-cn`、`geosite-cn`、`geosite-microsoft@cn`、`geosite-apple@cn`、`geosite-private` $\rightarrow$ 走 `ali` 解析真实国内 IP。
    - 命中 `fakeipfilter-!cn`（STUN、NTP、游戏联机等不可用 FakeIP 的海外域名） $\rightarrow$ 走 `google`（通过 `默认代理` 出站）解析真实海外 IP。

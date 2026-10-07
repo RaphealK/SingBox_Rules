@@ -3,15 +3,15 @@
   "dns": {
     "servers": [
       {"tag": "dhcp", "type": "dhcp", "detour": "🎯 Direct"},
-      {"tag": "local", "type": "local"},
+      {"tag": "local", "type": "local", "prefer_go": true},
       {"tag": "ali", "type": "h3", "server": "223.5.5.5"},
       {"tag": "tx", "type": "https", "server": "doh.pub", "domain_resolver": "hosts"},
       {"tag": "google", "type": "https", "server": "8.8.8.8", "detour": "🌍 Proxy"},
       {
         "tag": "fakeip",
         "type": "fakeip",
-        "inet4_range": "198.19.0.0/16",
-        "inet6_range": "fc00::/18"
+        "inet4_range": "198.18.0.0/16",
+        "inet6_range": "fc01::/18"
       },
       {"type": "hosts", "tag": "hosts", "predefined": {"doh.pub": ["1.12.12.21", "120.53.53.53"]}}
     ],
@@ -94,7 +94,7 @@
         "🎯 Direct"
       ]
     },
-    {"tag": "🎯 Direct", "type": "direct", "domain_resolver": "local"}
+    {"tag": "🎯 Direct", "type": "direct", "domain_resolver": "ali"}
   ],
   "http_clients": [
     {"tag": "直连下载", "detour": "🎯 Direct"}
@@ -287,7 +287,7 @@
     "final": "🌍 Proxy",
     "default_http_client": "直连下载",
     "auto_detect_interface": true,
-    "default_domain_resolver": {"server": "local"}
+    "default_domain_resolver": {"server": "ali"}
   },
   "inbounds": [
     {

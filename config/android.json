@@ -297,7 +297,14 @@
         "fdfe:dcba:9876::1/126"
       ],
       "auto_route": true,
-      "auto_redirect": true
+      "auto_redirect": true,
+      "platform": {
+        "http_proxy": {
+          "enabled": true,
+          "server": "127.0.0.1",
+          "server_port": 7890
+        }
+      }
     },
     {
       "tag": "mixed-in",

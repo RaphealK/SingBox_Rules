@@ -3,7 +3,7 @@
   "dns": {
     "servers": [
       {"tag": "dhcp", "type": "dhcp", "detour": "🎯 Direct"},
-      {"tag": "local", "type": "local", "prefer_go": true},
+      {"tag": "local", "type": "local"},
       {"tag": "ali", "type": "h3", "server": "223.5.5.5"},
       {"tag": "tx", "type": "https", "server": "doh.pub", "domain_resolver": "hosts"},
       {"tag": "google", "type": "https", "server": "8.8.8.8", "detour": "🌍 Proxy"},
@@ -17,8 +17,8 @@
     ],
     "rules": [
       {"query_type": ["HTTPS", "SVCB"], "action": "reject"},
-      {"wifi_ssid": ["KsRouter", "KsRouter-5G"], "server": "dhcp"},
-      {"clash_mode": "Direct", "server": "dhcp"},
+      {"wifi_ssid": ["KsRouter", "KsRouter-5G"], "server": "local"},
+      {"clash_mode": "Direct", "server": "local"},
       {"clash_mode": "Global", "server": "fakeip"},
       {"rule_set": "BlockAD", "action": "reject"},
       {"domain_suffix": ["luokinging.com"], "server": "ali"},
@@ -94,7 +94,7 @@
         "🎯 Direct"
       ]
     },
-    {"tag": "🎯 Direct", "type": "direct", "domain_resolver": "ali"}
+    {"tag": "🎯 Direct", "type": "direct", "domain_resolver": "local"}
   ],
   "http_clients": [
     {"tag": "直连下载", "detour": "🎯 Direct"}
@@ -287,7 +287,7 @@
     "final": "🌍 Proxy",
     "default_http_client": "直连下载",
     "auto_detect_interface": true,
-    "default_domain_resolver": {"server": "ali"}
+    "default_domain_resolver": {"server": "local"}
   },
   "inbounds": [
     {

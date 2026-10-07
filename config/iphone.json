@@ -16,6 +16,7 @@
     ],
     "rules": [
       {"query_type": ["HTTPS", "SVCB"], "action": "reject"},
+      {"wifi_ssid": ["KsRouter", "KsRouter-5G"], "server": "local"},
       {"clash_mode": "Direct", "server": "ali"},
       {"clash_mode": "Global", "server": "fakeip"},
       {"rule_set": "BlockAD", "action": "reject"},
@@ -118,6 +119,13 @@
           {"protocol": "dns"}
         ],
         "action": "hijack-dns"
+      },
+      {
+        "wifi_ssid": [
+          "KsRouter",
+          "KsRouter-5G"
+        ],
+        "outbound": "🎯 Direct"
       },
       {
         "domain": [

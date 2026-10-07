@@ -39,6 +39,7 @@
 | **DNS 架构** | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 |
 | **Game & Steam 规则** | **三层优化**（国服/下载直连，联机直连，社区/商店代理） | **三层优化**（国服/下载直连，联机直连，社区/商店代理） | **三层优化**（国服/下载直连，联机直连，社区/商店代理） | **三层优化**（国服/下载直连，联机直连，社区/商店代理） |
 | **Apple 服务** | 统一直连（`🎯 Direct`） | 统一直连（`🎯 Direct`） | 统一直连（`🎯 Direct`） | 统一直连（`🎯 Direct`） |
+| **家庭透明代理 Wi-Fi 联动** | 连接 `KsRouter / KsRouter-5G` 时 DNS 切 DHCP (local)，全量走 `🌉 Bridge` 驱动级直连 | 连接 `KsRouter / KsRouter-5G` 时 DNS 切 DHCP (local)，全量内核级 `action: "bypass"` 直通 | 本机即为透明代理宿主机 | 连接 `KsRouter / KsRouter-5G` 时 DNS 切 DHCP (local)，全量走 `🎯 Direct` 直连 |
 
 ---
 

@@ -43,7 +43,7 @@
 | **DNS 架构** | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 |
 | **Game & Steam 规则** | **三层优化**（国服/下载直连，联机直连，社区/商店代理） | **三层优化**（国服/下载直连，联机直连，社区/商店代理） | **三层优化**（国服/下载直连，联机直连，社区/商店代理） | **三层优化**（国服/下载直连，联机直连，社区/商店代理） | **三层优化**（国服/下载直连，联机直连，社区/商店代理） |
 | **Apple 服务** | 统一直连（`🎯 Direct`） | 统一直连（`🎯 Direct`） | 统一直连（`🎯 Direct`） | 统一直连（`🎯 Direct`） | 统一直连（`🎯 Direct`） |
-| **家庭透明代理与直连模式** | 直连模式（`Direct`）下 DNS 走 `local`（局域网 DHCP），流量走桥接 | 直连模式（`Direct`）下 DNS 走 `local`（局域网 DHCP），流量内核 bypass 直通 | 本机即为透明代理宿主机 | 直连模式（`Direct`）下 DNS 走 `local`（局域网 DHCP），流量内核 bypass 直通 | 直连模式（`Direct`）下 DNS 走 `local`（局域网 DHCP），流量直连 |
+| **家庭透明代理与直连模式** | 直连模式（`Direct`）下 DNS 走 `local`（局域网 DHCP），流量走桥接 | 直连模式（`Direct`）下 DNS 走 `local`（局域网 DHCP），流量内核 bypass 直通 | 本机即为透明代理宿主机 | 连入 `KsRouter` 自动内核 bypass + local DNS；支持 Direct 模式 | 连入 `KsRouter` 自动走直连 + local DNS；支持 Direct 模式 |
 
 ---
 

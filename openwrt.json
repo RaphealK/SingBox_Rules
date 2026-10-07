@@ -49,6 +49,14 @@
         "server": "dns-local"
       },
       {
+        "domain_suffix": [
+          "luokinging.com"
+        ],
+        "server": "dns-ali",
+        "timeout": "5s",
+        "remove_client_subnet": true
+      },
+      {
         "domain": [
           "derp.raphaelk.asia"
         ],

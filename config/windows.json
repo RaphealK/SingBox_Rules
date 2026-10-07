@@ -20,6 +20,7 @@
       {"clash_mode": "Direct", "server": "ali"},
       {"clash_mode": "Global", "server": "fakeip"},
       {"rule_set": "BlockAD", "action": "reject"},
+      {"domain_suffix": ["luokinging.com"], "server": "ali"},
       {
         "rule_set": [
           "fakeipfilter-cn",

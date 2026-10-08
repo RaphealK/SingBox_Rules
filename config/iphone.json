@@ -137,6 +137,7 @@
       {
         "ip_cidr": [
           "100.64.0.0/10",
+          "10.10.0.0/16",
           "fd7a:115c:a1e0::/48"
         ],
         "outbound": "tailscale-ep"
@@ -267,7 +268,12 @@
         "172.19.0.1/30",
         "fdfe:dcba:9876::1/126"
       ],
-      "auto_route": true
+      "auto_route": true,
+      "route_exclude_address": [
+        "100.64.0.0/10",
+        "10.10.0.0/16",
+        "fd7a:115c:a1e0::/48"
+      ]
     },
     {
       "tag": "mixed-in",

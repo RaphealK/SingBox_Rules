@@ -115,7 +115,8 @@
             ]
           }
         ],
-        "action": "bypass"
+        "action": "bypass",
+        "outbound": "🎯 Direct"
       },
       {
         "type": "logical",
@@ -143,12 +144,14 @@
           "tailscaled",
           "tailscale"
         ],
+        "action": "bypass",
         "outbound": "🎯 Direct"
       },
       {
         "domain": [
           "mesh.luokinging.com"
         ],
+        "action": "bypass",
         "outbound": "🎯 Direct"
       },
       {
@@ -168,6 +171,7 @@
       },
       {
         "ip_is_private": true,
+        "action": "bypass",
         "outbound": "🎯 Direct"
       },
       {
@@ -181,33 +185,33 @@
         "no_drop": true
       },
       {"network": "icmp", "action": "resolve"},
-      {"network": "icmp", "outbound": "🎯 Direct"},
-      {"clash_mode": "Direct", "outbound": "🎯 Direct"},
+      {"network": "icmp", "action": "bypass", "outbound": "🎯 Direct"},
+      {"clash_mode": "Direct", "action": "bypass", "outbound": "🎯 Direct"},
       {"clash_mode": "Global", "outbound": "🌐 Global"},
       {"rule_set": "BlockAD", "action": "reject"},
-      {"protocol": ["ssh", "bittorrent"], "outbound": "🎯 Direct"},
+      {"protocol": ["ssh", "bittorrent"], "action": "bypass", "outbound": "🎯 Direct"},
 
-      {"rule_set": "geosite-private", "outbound": "🎯 Direct"},
-      {"rule_set": ["geosite-apple", "geosite-apple@cn"], "outbound": "🎯 Direct"},
+      {"rule_set": "geosite-private", "action": "bypass", "outbound": "🎯 Direct"},
+      {"rule_set": ["geosite-apple", "geosite-apple@cn"], "action": "bypass", "outbound": "🎯 Direct"},
       {"rule_set": "geosite-category-ai-!cn", "outbound": "🤖 AI"},
       {"rule_set": "geosite-youtube", "outbound": "📹 YouTube"},
       {"rule_set": "geosite-google", "outbound": "🔍 Google"},
       {"rule_set": "geosite-github", "outbound": "🐙 GitHub"},
       {"rule_set": "geosite-onedrive", "outbound": "☁️ OneDrive"},
-      {"rule_set": "geosite-microsoft@cn", "outbound": "🎯 Direct"},
+      {"rule_set": "geosite-microsoft@cn", "action": "bypass", "outbound": "🎯 Direct"},
       {"rule_set": "geosite-microsoft", "outbound": "Ⓜ️ Microsoft"},
       {"rule_set": "geosite-telegram", "outbound": "✈️ Telegram"},
       {"rule_set": "geosite-paypal", "outbound": "💳 Wallet"},
       {"rule_set": "geosite-binance", "outbound": "💳 Wallet"},
       {"rule_set": "geosite-okx", "outbound": "💳 Wallet"},
       {"rule_set": "geosite-category-cryptocurrency", "outbound": "💳 Wallet"},
-      {"rule_set": ["geosite-category-games@cn", "geosite-steam@cn"], "outbound": "🎯 Direct"},
-      {"rule_set": "Game", "outbound": "🎯 Direct"},
+      {"rule_set": ["geosite-category-games@cn", "geosite-steam@cn"], "action": "bypass", "outbound": "🎯 Direct"},
+      {"rule_set": "Game", "action": "bypass", "outbound": "🎯 Direct"},
       {"rule_set": "geosite-steam", "outbound": "🎮 Steam"},
       {"rule_set": "geosite-geolocation-!cn", "outbound": "🌍 Proxy"},
       {"inbound": "mixed-in", "action": "resolve"},
       {"rule_set": "geoip-telegram", "outbound": "✈️ Telegram"},
-      {"rule_set": "geoip-cn", "outbound": "🎯 Direct"}
+      {"rule_set": "geoip-cn", "action": "bypass", "outbound": "🎯 Direct"}
     ],
     "rule_set": [
       {

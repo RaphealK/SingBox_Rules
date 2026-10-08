@@ -117,6 +117,12 @@
       "udp_mapping": "endpoint_independent",
       "udp_filtering": "endpoint_independent",
       "udp_nat_max": 8192
+    },
+    {
+      "tag": "mixed-in",
+      "type": "mixed",
+      "listen": "0.0.0.0",
+      "listen_port": 7890
     }
   ],
   "outbounds": [
@@ -894,12 +900,14 @@
           "tailscaled",
           "tailscale"
         ],
+        "action": "bypass",
         "outbound": "🌠 Direct"
       },
       {
         "domain": [
           "mesh.luokinging.com"
         ],
+        "action": "bypass",
         "outbound": "🌠 Direct"
       },
       {
@@ -908,7 +916,7 @@
           "192.168.31.0/24",
           "fd7a:115c:a1e0::/48"
         ],
-        "action": "route",
+        "action": "bypass",
         "outbound": "🌠 Direct"
       },
       {
@@ -932,10 +940,12 @@
           21116,
           21117
         ],
+        "action": "bypass",
         "outbound": "🌠 Direct"
       },
       {
         "ip_is_private": true,
+        "action": "bypass",
         "outbound": "🌠 Direct"
       },
       {
@@ -944,6 +954,7 @@
       },
       {
         "clash_mode": "Direct",
+        "action": "bypass",
         "outbound": "🌠 Direct"
       },
       {
@@ -955,10 +966,12 @@
           "ssh",
           "bittorrent"
         ],
+        "action": "bypass",
         "outbound": "🌠 Direct"
       },
       {
         "port": 3478,
+        "action": "bypass",
         "outbound": "🌠 Direct"
       },
       {
@@ -980,6 +993,7 @@
           "windowsupdate",
           "speedtest"
         ],
+        "action": "bypass",
         "outbound": "🌠 Direct"
       },
       {
@@ -1002,6 +1016,7 @@
           "Game",
           "geoip-cn"
         ],
+        "action": "bypass",
         "outbound": "🌠 Direct"
       },
       {

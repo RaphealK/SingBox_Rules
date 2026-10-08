@@ -9,13 +9,12 @@
       {
         "tag": "fakeip",
         "type": "fakeip",
-        "inet4_range": "198.18.0.0/16",
-        "inet6_range": "fc01::/18"
+        "inet4_range": "198.18.0.0/16"
       },
       {"type": "hosts", "tag": "hosts", "predefined": {"doh.pub": ["1.12.12.21", "120.53.53.53"]}}
     ],
     "rules": [
-      {"query_type": ["HTTPS", "SVCB"], "action": "reject"},
+      {"query_type": ["HTTPS", "SVCB", "AAAA"], "action": "reject"},
       {"wifi_ssid": ["KsRouter", "KsRouter-5G"], "server": "local"},
       {"clash_mode": "Direct", "server": "local"},
       {"clash_mode": "Global", "server": "fakeip"},
@@ -52,7 +51,7 @@
       {"query_type": ["A", "AAAA"], "server": "fakeip", "rewrite_ttl": 1}
     ],
     "final": "google",
-    "strategy": "prefer_ipv4",
+    "strategy": "ipv4_only",
     "cache_capacity": 8192,
     "optimistic": {"enabled": true},
     "reverse_mapping": true
@@ -93,7 +92,7 @@
         "🎯 Direct"
       ]
     },
-    {"tag": "🎯 Direct", "type": "direct", "domain_resolver": "local"}
+    {"tag": "🎯 Direct", "type": "direct", "domain_resolver": "local", "strategy": "ipv4_only"}
   ],
   "http_clients": [
     {"tag": "直连下载", "detour": "🎯 Direct"}
@@ -111,7 +110,6 @@
             "mode": "or",
             "rules": [
               {"ip_is_private": true},
-              {"ip_cidr": ["100.64.0.0/10", "10.10.0.0/16", "fd7a:115c:a1e0::/48"]},
               {"rule_set": "geoip-cn"}
             ]
           }
@@ -143,6 +141,13 @@
         "wifi_ssid": [
           "KsRouter",
           "KsRouter-5G"
+        ],
+        "outbound": "🎯 Direct"
+      },
+      {
+        "ip_cidr": [
+          "fe80::/10",
+          "ff00::/8"
         ],
         "outbound": "🎯 Direct"
       },
@@ -304,10 +309,10 @@
       ],
       "auto_route": true,
       "auto_redirect": true,
+      "strict_route": true,
       "route_exclude_address": [
-        "100.64.0.0/10",
-        "10.10.0.0/16",
-        "fd7a:115c:a1e0::/48"
+        "fe80::/10",
+        "fc00::/7"
       ]
     },
     {

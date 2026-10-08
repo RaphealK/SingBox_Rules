@@ -42,13 +42,16 @@ foreach ($cfgPath in $checkConfigs) {
         Write-Host "[OK] ${cfgPath}: dns.rules[0] 已成功拦截 AAAA" -ForegroundColor Green
     }
 
-    # 4. 验证 Direct 出站包含 strategy: ipv4_only
+    # 4. 验证 Direct 出站符合官方规范（使用 domain_resolver: local，无非法 strategy 字段）
     $direct = $cfg.outbounds | Where-Object { $_.tag -eq '🎯 Direct' }
-    if ($direct.strategy -ne 'ipv4_only') {
-        Write-Error "[FAIL] ${cfgPath}: 🎯 Direct 出站缺少 strategy: ipv4_only"
+    if ($direct.PSObject.Properties['strategy']) {
+        Write-Error "[FAIL] ${cfgPath}: 🎯 Direct 出站包含非法的 strategy 字段"
+        $allSuccess = $false
+    } elseif ($direct.domain_resolver -ne 'local') {
+        Write-Error "[FAIL] ${cfgPath}: 🎯 Direct 出站缺少 domain_resolver: local"
         $allSuccess = $false
     } else {
-        Write-Host "[OK] ${cfgPath}: 🎯 Direct 出站已配置 strategy: ipv4_only" -ForegroundColor Green
+        Write-Host "[OK] ${cfgPath}: 🎯 Direct 出站符合官方规范（无 strategy，使用 domain_resolver）" -ForegroundColor Green
     }
 
     # 5. 验证 tun-in 包含 strict_route

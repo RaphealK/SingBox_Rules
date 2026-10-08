@@ -92,7 +92,7 @@
         "🎯 Direct"
       ]
     },
-    {"tag": "🎯 Direct", "type": "direct", "domain_resolver": "local", "strategy": "ipv4_only"}
+    {"tag": "🎯 Direct", "type": "direct", "domain_resolver": "local"}
   ],
   "http_clients": [
     {"tag": "直连下载", "detour": "🎯 Direct"}

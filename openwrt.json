@@ -890,17 +890,15 @@
         "action": "sniff"
       },
       {
-        "domain": [
-          "controlplane.tailscale.com",
-          "login.tailscale.com",
-          "logs.tailscale.com"
-        ],
-        "outbound": "🚀 GlobalProxy"
-      },
-      {
         "process_name": [
           "tailscaled",
           "tailscale"
+        ],
+        "outbound": "🌠 Direct"
+      },
+      {
+        "domain": [
+          "mesh.luokinging.com"
         ],
         "outbound": "🌠 Direct"
       },
@@ -912,6 +910,14 @@
         ],
         "action": "route",
         "outbound": "🌠 Direct"
+      },
+      {
+        "domain": [
+          "controlplane.tailscale.com",
+          "login.tailscale.com",
+          "logs.tailscale.com"
+        ],
+        "outbound": "🚀 GlobalProxy"
       },
       {
         "domain": [

@@ -139,18 +139,15 @@
         "action": "hijack-dns"
       },
       {
-        "domain": [
-          "your-headscale-domain.com",
-          "controlplane.tailscale.com",
-          "login.tailscale.com",
-          "logs.tailscale.com"
-        ],
-        "outbound": "🌍 Proxy"
-      },
-      {
         "process_name": [
           "tailscaled",
           "tailscale"
+        ],
+        "outbound": "🎯 Direct"
+      },
+      {
+        "domain": [
+          "mesh.luokinging.com"
         ],
         "outbound": "🎯 Direct"
       },
@@ -160,6 +157,14 @@
           "fd7a:115c:a1e0::/48"
         ],
         "outbound": "tailscale-ep"
+      },
+      {
+        "domain": [
+          "controlplane.tailscale.com",
+          "login.tailscale.com",
+          "logs.tailscale.com"
+        ],
+        "outbound": "🌍 Proxy"
       },
       {
         "ip_is_private": true,
@@ -293,7 +298,7 @@
     {
       "type": "tailscale",
       "tag": "tailscale-ep",
-      "control_url": "https://your-headscale-domain.com",
+      "control_url": "https://mesh.luokinging.com",
       "auth_key": "tskey-auth-xxxxxxxxxxxx",
       "hostname": "linux-singbox",
       "accept_routes": true

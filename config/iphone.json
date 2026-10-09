@@ -161,6 +161,11 @@
         "outbound": "🎯 Direct"
       },
       {
+        "ip_version": 6,
+        "action": "reject",
+        "no_drop": true
+      },
+      {
         "type": "logical",
         "mode": "or",
         "rules": [
@@ -276,6 +281,10 @@
       ],
       "auto_route": true,
       "strict_route": true,
+      "route_address": [
+        "0.0.0.0/0",
+        "fd7a:115c:a1e0::/48"
+      ],
       "route_exclude_address": [
         "fe80::/10",
         "fc00::/7"

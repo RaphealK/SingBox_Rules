@@ -100,6 +100,20 @@
   "route": {
     "rules": [
       {
+        "domain_suffix": [
+          "luokinging.com"
+        ],
+        "action": "bypass",
+        "outbound": "🎯 Direct"
+      },
+      {
+        "ip_cidr": [
+          "8.134.36.157/32"
+        ],
+        "action": "bypass",
+        "outbound": "🎯 Direct"
+      },
+      {
         "type": "logical",
         "mode": "and",
         "rules": [
@@ -143,13 +157,6 @@
         "process_name": [
           "tailscaled",
           "tailscale"
-        ],
-        "action": "bypass",
-        "outbound": "🎯 Direct"
-      },
-      {
-        "domain": [
-          "mesh.luokinging.com"
         ],
         "action": "bypass",
         "outbound": "🎯 Direct"
@@ -295,7 +302,8 @@
       "route_exclude_address": [
         "100.64.0.0/10",
         "10.10.0.0/16",
-        "fd7a:115c:a1e0::/48"
+        "fd7a:115c:a1e0::/48",
+        "8.134.36.157/32"
       ]
     },
     {
@@ -321,7 +329,10 @@
     "cache_file": {
       "enabled": true,
       "path": "/etc/sing-box/cache.db",
-      "store_dns": true
+      "store_fakeip": true,
+      "store_dns": true,
+      "buffer_size": "2MB",
+      "flush_interval": "5m"
     },
     "clash_api": {
       "external_controller": "0.0.0.0:9095",

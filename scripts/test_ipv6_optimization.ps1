@@ -63,53 +63,30 @@ foreach ($cfgPath in $checkConfigs) {
         Write-Host "[OK] ${cfgPath}: tun-in strict_route 启用正常" -ForegroundColor Green
     }
 
-    # 6. 验证 tun-in 保留 IPv6 ULA 地址供 Tailscale 使用
-    if ($tun.address -notcontains 'fdfe:dcba:9876::1/126') {
-        Write-Error "[FAIL] ${cfgPath}: tun-in 缺少 ULA 地址 fdfe:dcba:9876::1/126"
+    # 6. 验证 tun-in 为纯 IPv4（彻底移除 IPv6 地址）
+    if ($tun.address.Count -ne 1 -or $tun.address[0] -ne '172.19.0.1/30') {
+        Write-Error "[FAIL] ${cfgPath}: tun-in 不是纯 IPv4 地址 (当前地址: $($tun.address -join ', '))"
         $allSuccess = $false
     } else {
-        Write-Host "[OK] ${cfgPath}: tun-in 保留了底层 IPv6 ULA 地址" -ForegroundColor Green
+        Write-Host "[OK] ${cfgPath}: tun-in 为纯 IPv4 单栈 (已彻底关闭 IPv6 地址)" -ForegroundColor Green
     }
 
-    # 7. 验证路由中包含本地链路 IPv6 fe80::/10 直连
-    $localV6Rule = $cfg.route.rules | Where-Object { $_.ip_cidr -contains 'fe80::/10' -and $_.outbound -eq '🎯 Direct' }
-    if (-not $localV6Rule) {
-        Write-Error "[FAIL] ${cfgPath}: 缺少 fe80::/10 本地 IPv6 直连路由"
+    # 7. 验证 Tailscale 路由为纯 IPv4 网段
+    $tsRule = $cfg.route.rules | Where-Object { $_.outbound -eq 'tailscale-ep' }
+    if (-not $tsRule -or $tsRule.ip_cidr -contains 'fd7a:115c:a1e0::/48') {
+        Write-Error "[FAIL] ${cfgPath}: Tailscale 路由未转为纯 IPv4"
         $allSuccess = $false
     } else {
-        Write-Host "[OK] ${cfgPath}: 本地链路 IPv6 fe80::/10 直连规则生效" -ForegroundColor Green
+        Write-Host "[OK] ${cfgPath}: Tailscale 路由为纯 IPv4 (100.64.0.0/10)" -ForegroundColor Green
     }
 
-    # 8. 验证 Tailscale fd7a:115c:a1e0::/48 路由至 tailscale-ep
-    $tsRule = $cfg.route.rules | Where-Object { $_.ip_cidr -contains 'fd7a:115c:a1e0::/48' -and $_.outbound -eq 'tailscale-ep' }
-    if (-not $tsRule) {
-        Write-Error "[FAIL] ${cfgPath}: 缺少 Tailscale IPv6 路由"
-        $allSuccess = $false
-    } else {
-        Write-Host "[OK] ${cfgPath}: Tailscale IPv6 路由规则生效" -ForegroundColor Green
-    }
-
-    # 9. 验证 tun-in 的 route_address 仅限制在 IPv4 和 Tailscale IPv6，不下发 ::/0
-    if (-not $tun.route_address) {
-        Write-Error "[FAIL] ${cfgPath}: tun-in 缺少 route_address 字段"
-        $allSuccess = $false
-    } elseif ($tun.route_address -contains '::/0') {
-        Write-Error "[FAIL] ${cfgPath}: tun-in 错误包含了全局 ::/0 路由"
-        $allSuccess = $false
-    } elseif ($tun.route_address -notcontains '0.0.0.0/0' -or $tun.route_address -notcontains 'fd7a:115c:a1e0::/48') {
-        Write-Error "[FAIL] ${cfgPath}: tun-in route_address 缺少必要网段"
-        $allSuccess = $false
-    } else {
-        Write-Host "[OK] ${cfgPath}: tun-in 精准声明了 route_address（无 ::/0，仅 Tailscale IPv6）" -ForegroundColor Green
-    }
-
-    # 10. 验证 route.rules 包含公网 IPv6 瞬时 reject 兜底规则
+    # 8. 验证 route.rules 包含 IPv6 全局 reject 拦截规则
     $v6RejectRule = $cfg.route.rules | Where-Object { $_.ip_version -eq 6 -and $_.action -eq 'reject' -and $_.no_drop -eq $true }
     if (-not $v6RejectRule) {
-        Write-Error "[FAIL] ${cfgPath}: 缺少 ip_version: 6 的 reject 兜底规则"
+        Write-Error "[FAIL] ${cfgPath}: 缺少 ip_version: 6 的 reject 阻断规则"
         $allSuccess = $false
     } else {
-        Write-Host "[OK] ${cfgPath}: 公网 IPv6 瞬时 reject 兜底规则生效" -ForegroundColor Green
+        Write-Host "[OK] ${cfgPath}: 全局 IPv6 瞬时 reject 阻断规则生效" -ForegroundColor Green
     }
 }
 

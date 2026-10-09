@@ -134,17 +134,14 @@
         "outbound": "🎯 Direct"
       },
       {
-        "ip_cidr": [
-          "fe80::/10",
-          "ff00::/8"
-        ],
-        "outbound": "🎯 Direct"
+        "ip_version": 6,
+        "action": "reject",
+        "no_drop": true
       },
       {
         "ip_cidr": [
           "100.64.0.0/10",
-          "10.10.0.0/16",
-          "fd7a:115c:a1e0::/48"
+          "10.10.0.0/16"
         ],
         "outbound": "tailscale-ep"
       },
@@ -159,11 +156,6 @@
       {
         "ip_is_private": true,
         "outbound": "🎯 Direct"
-      },
-      {
-        "ip_version": 6,
-        "action": "reject",
-        "no_drop": true
       },
       {
         "type": "logical",
@@ -276,19 +268,10 @@
       "tag": "tun-in",
       "type": "tun",
       "address": [
-        "172.19.0.1/30",
-        "fdfe:dcba:9876::1/126"
+        "172.19.0.1/30"
       ],
       "auto_route": true,
-      "strict_route": true,
-      "route_address": [
-        "0.0.0.0/0",
-        "fd7a:115c:a1e0::/48"
-      ],
-      "route_exclude_address": [
-        "fe80::/10",
-        "fc00::/7"
-      ]
+      "strict_route": true
     },
     {
       "tag": "mixed-in",

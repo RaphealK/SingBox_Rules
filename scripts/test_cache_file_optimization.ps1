@@ -46,7 +46,7 @@ foreach ($cfg in $configs) {
     Write-Host "[OK] $cfg cache_file.enabled=true 且 store_fakeip=true" -ForegroundColor Green
 }
 
-# 针对 openwrt.json 进行深度设备特性断言 (红米 AX6000 闪存防磨损调优)
+# 针对 openwrt.json 进行深度设备特性断言 (Sing-Box 1.14 正式版合规校验)
 $openwrt = (Get-Content -Path "config/openwrt.json" -Raw -Encoding UTF8) | ConvertFrom-Json
 $openwrtCache = $openwrt.experimental.cache_file
 
@@ -58,14 +58,10 @@ if ($openwrtCache.store_dns -ne $true) {
     throw "openwrt.json 的 cache_file.store_dns 期望为 true"
 }
 
-if ($openwrtCache.buffer_size -ne "2MB") {
-    throw "openwrt.json 的 cache_file.buffer_size 期望为 2MB，实际为 $($openwrtCache.buffer_size)"
+if ($null -ne $openwrtCache.PSObject.Properties["buffer_size"] -or $null -ne $openwrtCache.PSObject.Properties["flush_interval"]) {
+    throw "openwrt.json 不应包含 1.15 专属字段 buffer_size 或 flush_interval"
 }
 
-if ($openwrtCache.flush_interval -ne "5m") {
-    throw "openwrt.json 的 cache_file.flush_interval 期望为 5m，实际为 $($openwrtCache.flush_interval)"
-}
-
-Write-Host "[OK] openwrt.json 闪存防磨损优化（2MB 缓冲 + 5m 刷盘 + 路径 + store_dns）断言通过！" -ForegroundColor Green
+Write-Host "[OK] openwrt.json 1.14 cache_file（路径 + store_fakeip + store_dns，无 1.15 越界字段）断言通过！" -ForegroundColor Green
 
 Write-Host "================ 所有验证通过 ================" -ForegroundColor Cyan

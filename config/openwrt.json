@@ -2,7 +2,7 @@
   "$schema": "https://sing-box.sagernet.org/schema.json",
   "dns": {
     "servers": [
-      {"tag": "local", "type": "local", "prefer_go": true},
+      {"tag": "local", "type": "local", "prefer_go": true, "neighbor_domain": [".", ".lan"]},
       {"tag": "ali", "type": "h3", "server": "223.5.5.5"},
       {"tag": "google", "type": "https", "server": "8.8.8.8", "detour": "🌍 Proxy"},
       {
@@ -41,15 +41,31 @@
           {"rule_set": "geosite-geolocation-!cn", "invert": true}
         ],
         "action": "evaluate",
-        "server": "google",
-        "client_subnet": "223.5.5.0/24",
+        "tag": "ali",
+        "server": "ali",
         "timeout": "2s"
       },
-      {"match_response": true, "rule_set": "geoip-cn", "server": "ali"},
+      {"match_response": "ali", "rule_set": "geoip-cn", "race": true, "action": "respond"},
+      {
+        "type": "logical",
+        "mode": "and",
+        "rules": [
+          {"query_type": ["A", "AAAA"]},
+          {"rule_set": "geosite-geolocation-!cn", "invert": true}
+        ],
+        "action": "evaluate",
+        "tag": "google",
+        "server": "google",
+        "client_subnet": "223.5.5.0/24",
+        "speculative": true,
+        "timeout": "2s"
+      },
+      {"match_response": "google", "rule_set": "geoip-cn", "race": true, "action": "respond"},
       {"query_type": ["A", "AAAA"], "server": "fakeip", "rewrite_ttl": 1}
     ],
     "final": "google",
     "strategy": "prefer_ipv4",
+    "timeout": "5s",
     "cache_capacity": 8192,
     "optimistic": {"enabled": true},
     "reverse_mapping": true
@@ -256,7 +272,8 @@
         "fdfe:dcba:9876::1/126"
       ],
       "auto_route": true,
-      "auto_redirect": true
+      "auto_redirect": true,
+      "exclude_mptcp": true
     },
     {
       "tag": "mixed-in",
@@ -290,9 +307,7 @@
       "enabled": true,
       "path": "/etc/sing-box/cache.db",
       "store_fakeip": true,
-      "store_dns": true,
-      "buffer_size": "2MB",
-      "flush_interval": "5m"
+      "store_dns": true
     }
   },
   "certificate": {

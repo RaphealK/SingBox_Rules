@@ -84,7 +84,39 @@ foreach ($cfg in $tsConfigs) {
         throw "$cfg 仍存在冗余的 100.64.0.0/10 ip_cidr 路由规则"
     }
 
-    Write-Host "[OK] $cfg 精简无硬编码模板与规则去重断言通过！" -ForegroundColor Green
+    # 3.1 验证 Sing-Box 1.14 新特性：dns.timeout 与 ali+google 并行竞态 evaluate + respond
+    if ($json.dns.timeout -ne "5s") {
+        throw "$cfg 的 dns.timeout 期望为 5s，实际为 $($json.dns.timeout)"
+    }
+    $evalAli = $json.dns.rules | Where-Object { $_.action -eq "evaluate" -and $_.tag -eq "ali" -and $_.server -eq "ali" }
+    $raceAli = $json.dns.rules | Where-Object { $_.match_response -eq "ali" -and $_.rule_set -eq "geoip-cn" -and $_.race -eq $true -and $_.action -eq "respond" }
+    $evalGoogle = $json.dns.rules | Where-Object { $_.action -eq "evaluate" -and $_.tag -eq "google" -and $_.server -eq "google" -and $_.speculative -eq $true }
+    $raceGoogle = $json.dns.rules | Where-Object { $_.match_response -eq "google" -and $_.rule_set -eq "geoip-cn" -and $_.race -eq $true -and $_.action -eq "respond" }
+    if ($null -eq $evalAli -or $null -eq $raceAli -or $null -eq $evalGoogle -or $null -eq $raceGoogle) {
+        throw "$cfg 的 ali+google 并行竞态 evaluate+respond 规则配置不完整"
+    }
+
+    # 3.2 验证端侧专属 1.14 新特性
+    if ($cfg -in @("openwrt.json", "linux.json")) {
+        $tunIn = $json.inbounds | Where-Object { $_.tag -eq "tun-in" }
+        if ($tunIn.exclude_mptcp -ne $true) {
+            throw "$cfg 的 tun-in.exclude_mptcp 期望为 true"
+        }
+    }
+    if ($cfg -eq "openwrt.json") {
+        $localDns = $json.dns.servers | Where-Object { $_.tag -eq "local" }
+        if (-not ($localDns.neighbor_domain -contains "." -and $localDns.neighbor_domain -contains ".lan")) {
+            throw "openwrt.json 的 local DNS 未启用 neighbor_domain: ['.', '.lan']"
+        }
+    }
+    if ($cfg -eq "iphone.json") {
+        $httpClient = $json.http_clients | Where-Object { $_.tag -eq "直连下载" }
+        if ($httpClient.engine -ne "apple") {
+            throw "iphone.json 的 http_clients[直连下载] 未启用 engine: apple"
+        }
+    }
+
+    Write-Host "[OK] $cfg 精简无硬编码模板、规则去重与 1.14 新特性断言通过！" -ForegroundColor Green
 }
 
 # 4. 验证 substore-endpoint.js 动态传参控制（以 openwrt.json 测试子网路由与控制面注入）

@@ -31,15 +31,16 @@
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **特殊出站 (`outbounds`)** | 额外包含 `🌉 Bridge` (bridge) | 无 | 无 | 无 | 无 |
 | **首条路由 (`route.rules[0]`)** | `preferred_by: ["🌉 Bridge"]` 走桥接（含内网/国内 IP） | `tun-in` 非全局下私有/非 Tailscale/国内 IP `bypass` | `tun-in` 非全局下私有/非 Tailscale/国内 IP `bypass` | 非全局下私有/非 Tailscale/国内 IP `bypass` | 无（直接从 sniff 开始） |
-| **TUN 入站** | `platform.http_proxy` (`127.0.0.1:7890`) | `auto_redirect: true` | `auto_redirect: true` | `auto_redirect: true` (支持 Root 内核重定向) | `platform.http_proxy` (`127.0.0.1:7890`) |
+| **TUN 入站** | `platform.http_proxy` (`127.0.0.1:7890`) | `auto_redirect: true`, `exclude_mptcp: true` | `auto_redirect: true`, `exclude_mptcp: true` | `auto_redirect: true`, `strict_route: true`, `platform.http_proxy` | `strict_route: true`, `platform.http_proxy` |
+| **HTTP 下载客户端 (`http_clients`)** | `detour: 🎯 Direct` | `detour: 🎯 Direct` | `detour: 🎯 Direct` | `detour: 🎯 Direct` | `engine: "apple"`, `detour: 🎯 Direct` |
 | **混合入站** | `0.0.0.0:7890` | `0.0.0.0:7890` | `0.0.0.0:7890` | `127.0.0.1:7890`（移动安全绑定） | `127.0.0.1:7890`（移动安全绑定） |
 | **API 服务 (`services[api]`)** | `0.0.0.0:9090`（纯 API，供自建统一面板连接） | `0.0.0.0:9090`（纯 API，供自建统一面板连接） | `0.0.0.0:7714`（纯 API，供自建统一面板连接） | 无（由安卓客户端 UI 接管） | 无（由 iOS 客户端接管） |
-| **缓存文件** | `store_dns: true` | `path: /etc/sing-box/cache.db`, `store_dns: true` | `path: /etc/sing-box/cache.db`, `store_dns: true` | `store_fakeip: true` | `store_fakeip: true` |
+| **缓存文件** | `store_fakeip: true`, `store_dns: true` | `path: /etc/sing-box/cache.db`, `store_fakeip: true`, `store_dns: true` | `path: /etc/sing-box/cache.db`, `store_fakeip: true`, `store_dns: true` | `store_fakeip: true` | `store_fakeip: true` |
 | **NTP 同步** | 启用 (`time.apple.com`) | 启用 (`time.apple.com`) | 启用 (`time.apple.com`) | 无 | 无 |
 | **Headscale / Tailscale** | ✅ 原生端点 (`tailscale-ep`) | ✅ 原生端点 (`tailscale-ep`) | ✅ 原生端点 (`tailscale-ep`) | ✅ 原生端点 (`tailscale-ep`) | ✅ 原生端点 (`tailscale-ep`) |
 | **应用包名分流 (`package_name`)** | 无 | 无 | 无 | ✅ 微信/支付宝/网银/高德 App 强制直连防风控 | 无（iOS 系统沙盒限制） |
 | **策略组命名风格** | **统一 Emoji + 英文**（支持各业务组独立选节点） | **统一 Emoji + 英文**（支持各业务组独立选节点） | **统一 Emoji + 英文**（支持各业务组独立选节点） | **统一 Emoji + 英文**（支持各业务组独立选节点） | **统一 Emoji + 英文**（支持各业务组独立选节点） |
-| **DNS 架构** | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + 纯 IPv4（TUN 仅 IPv4，拦截 AAAA 与 IPv6） | **HTTP/3 (`ali`)** + 纯 IPv4（TUN 仅 IPv4，拦截 AAAA 与 IPv6） |
+| **DNS 架构** | **HTTP/3 (`ali`)** + `prefer_ipv4` + `timeout: 5s` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `prefer_ipv4` + `timeout: 5s` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `neighbor_domain` + `prefer_ipv4` + `timeout: 5s` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `timeout: 5s` + 纯 IPv4（拦截 AAAA 与 IPv6） | **HTTP/3 (`ali`)** + `timeout: 5s` + 纯 IPv4（拦截 AAAA 与 IPv6） |
 | **Game & Steam 规则** | **三层优化**（国服/下载直连，联机直连，社区/商店代理） | **三层优化**（国服/下载直连，联机直连，社区/商店代理） | **三层优化**（国服/下载直连，联机直连，社区/商店代理） | **三层优化**（国服/下载直连，联机直连，社区/商店代理） | **三层优化**（国服/下载直连，联机直连，社区/商店代理） |
 | **Apple 服务** | 统一直连（`🎯 Direct`） | 统一直连（`🎯 Direct`） | 统一直连（`🎯 Direct`） | 统一直连（`🎯 Direct`） | 统一直连（`🎯 Direct`） |
 | **家庭透明代理与直连模式** | 直连模式（`Direct`）下 DNS 走 `local`（局域网 DHCP），流量走桥接 | 直连模式（`Direct`）下 DNS 走 `local`（局域网 DHCP），流量内核 bypass 直通 | 本机即为透明代理宿主机 | 连入 `KsRouter` 自动内核 bypass + local DNS；支持 Direct 模式 | 连入 `KsRouter` 自动走直连 + local DNS；支持 Direct 模式 |
@@ -52,11 +53,11 @@
 
 ### 3.1 DNS 解析流水线 (`dns`)
 1. **屏蔽 HTTPS/SVCB 与移动端彻底关闭 IPv6**：拒绝 `HTTPS` 和 `SVCB` 查询防止客户端绕过分流；在移动端（`iphone.json` / `android.json`）TUN 入站仅配置 IPv4 地址，前置拒绝 `AAAA` 查询且使用 `ipv4_only` 策略，路由规则拦截所有 `ip_version: 6` 流量，从系统内核层彻底关闭移动端 IPv6 协议族，根治移动网络/公共 Wi-Fi 无公网 IPv6 导致的 Happy Eyeballs 超时与网络假死（Tailscale 走 `100.64.0.0/10` IPv4 互联）。
-2. **模式优先**：`Direct` 模式 DNS 默认走 `local`（局域网 DHCP/原生 DNS，不污染不二次转发），`Global` 模式返回 `fakeip`。连入家庭部署透明代理的 Wi-Fi（如 `KsRouter`）时，客户端切换为直连（Direct）模式即可获得最高性能与原生局域网 DNS。
+2. **模式优先**：`Direct` 模式 DNS 默认走 `local`（局域网 DHCP/原生 DNS，OpenWrt 端额外启用 `neighbor_domain: [".", ".lan"]` 局域网邻居主机名解析），`Global` 模式返回 `fakeip`。连入家庭部署透明代理的 Wi-Fi（如 `KsRouter`）时，客户端切换为直连（Direct）模式即可获得最高性能与原生局域网 DNS。
 3. **FakeIP 过滤**：
-   - 命中 `fakeipfilter-cn`、`geosite-cn`、`geosite-microsoft@cn`、`geosite-apple@cn`、`geosite-private` $\rightarrow$ 走 `ali` 解析真实国内 IP。
-   - 命中 `fakeipfilter-!cn`（STUN、NTP、游戏联机等不可用 FakeIP 的海外域名） $\rightarrow$ 走 `google`（通过 `默认代理` 出站）解析真实海外 IP。
-4. **未知域名探测**：对非 `geosite-geolocation-!cn` 的 `A/AAAA` 查询，先通过 `google` 携带 `client_subnet: 223.5.5.0/24` 进行 `evaluate` 评估；若返回 IP 命中 `geoip-cn` 则交由 `ali` 解析，否则分配 `fakeip`（`198.19.0.0/16`，`rewrite_ttl: 1`）。
+   - 命中 `fakeipfilter-cn`、`geosite-cn`、`geosite-microsoft@cn`、`geosite-apple`、`geosite-private` $\rightarrow$ 走 `ali` 解析真实国内 IP。
+   - 命中 `fakeipfilter-!cn`（STUN、NTP、游戏联机等不可用 FakeIP 的海外域名） $\rightarrow$ 走 `google`（通过 `🌍 Proxy` 出站）解析真实海外 IP。
+4. **未知域名双路并行竞态探测 (`evaluate` + `race` + `speculative` + `respond`)**：对非 `geosite-geolocation-!cn` 的查询，利用 1.14 新特性同时并发通过 `ali`（直连 H3）与 `google`（携带 `client_subnet: 223.5.5.0/24`、`speculative: true`）进行竞态评估（`race: true`）；任一响应率先命中 `geoip-cn` 即通过 `action: "respond"` 0ms 直接返回已评估的真实国内 IP 并自动取消另一路查询，彻底消除二次查询等待；若均未命中 `geoip-cn` 则立即分配 `fakeip`（`rewrite_ttl: 1`）。
 
 ### 3.2 新增或调整分流规则
 当需要新增一个业务分流（例如新增规则集与对应策略组）时，按顺序在五端同步修改 3 处：

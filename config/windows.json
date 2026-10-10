@@ -41,15 +41,31 @@
           {"rule_set": "geosite-geolocation-!cn", "invert": true}
         ],
         "action": "evaluate",
-        "server": "google",
-        "client_subnet": "223.5.5.0/24",
+        "tag": "ali",
+        "server": "ali",
         "timeout": "2s"
       },
-      {"match_response": true, "rule_set": "geoip-cn", "server": "ali"},
+      {"match_response": "ali", "rule_set": "geoip-cn", "race": true, "action": "respond"},
+      {
+        "type": "logical",
+        "mode": "and",
+        "rules": [
+          {"query_type": ["A", "AAAA"]},
+          {"rule_set": "geosite-geolocation-!cn", "invert": true}
+        ],
+        "action": "evaluate",
+        "tag": "google",
+        "server": "google",
+        "client_subnet": "223.5.5.0/24",
+        "speculative": true,
+        "timeout": "2s"
+      },
+      {"match_response": "google", "rule_set": "geoip-cn", "race": true, "action": "respond"},
       {"query_type": ["A", "AAAA"], "server": "fakeip", "rewrite_ttl": 1}
     ],
     "final": "google",
     "strategy": "prefer_ipv4",
+    "timeout": "5s",
     "cache_capacity": 8192,
     "optimistic": {"enabled": true},
     "reverse_mapping": true

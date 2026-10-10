@@ -33,7 +33,7 @@
 | **首条路由 (`route.rules[0]`)** | `preferred_by: ["🌉 Bridge"]` 走桥接（含内网/国内 IP） | `tun-in` 非全局下私有/非 Tailscale/国内 IP `bypass` | `tun-in` 非全局下私有/非 Tailscale/国内 IP `bypass` | 非全局下私有/非 Tailscale/国内 IP `bypass` | 无（直接从 sniff 开始） |
 | **TUN 入站** | `platform.http_proxy` (`127.0.0.1:7890`) | `auto_redirect: true` | `auto_redirect: true` | `auto_redirect: true` (支持 Root 内核重定向) | `platform.http_proxy` (`127.0.0.1:7890`) |
 | **混合入站** | `0.0.0.0:7890` | `0.0.0.0:7890` | `0.0.0.0:7890` | `127.0.0.1:7890`（移动安全绑定） | `127.0.0.1:7890`（移动安全绑定） |
-| **API 与官方面板 (`services[api]`)** | `0.0.0.0:9090`，路径 `"dashboard"` | `0.0.0.0:9090`，路径 `"/etc/sing-box/dashboard"` | `0.0.0.0:7714`，路径 `"/etc/sing-box/dashboard"` | 无（由安卓客户端 UI 接管） | 无（由 iOS 客户端接管） |
+| **API 服务 (`services[api]`)** | `0.0.0.0:9090`（纯 API，供自建统一面板连接） | `0.0.0.0:9090`（纯 API，供自建统一面板连接） | `0.0.0.0:7714`（纯 API，供自建统一面板连接） | 无（由安卓客户端 UI 接管） | 无（由 iOS 客户端接管） |
 | **缓存文件** | `store_dns: true` | `path: /etc/sing-box/cache.db`, `store_dns: true` | `path: /etc/sing-box/cache.db`, `store_dns: true` | `store_fakeip: true` | `store_fakeip: true` |
 | **NTP 同步** | 启用 (`time.apple.com`) | 启用 (`time.apple.com`) | 启用 (`time.apple.com`) | 无 | 无 |
 | **Headscale / Tailscale** | ✅ 原生端点 (`tailscale-ep`) | ✅ 原生端点 (`tailscale-ep`) | ✅ 原生端点 (`tailscale-ep`) | ✅ 原生端点 (`tailscale-ep`) | ✅ 原生端点 (`tailscale-ep`) |

@@ -117,19 +117,25 @@ https://gh-proxy.com/https://raw.githubusercontent.com/RaphealK/SingBox_Rules/ma
 ```
 
 ### 脚本参数说明
-- `control_url` / `url`: Headscale 控制面完整地址（传入后自动注入控制面域名直连 DNS 规则防 FakeIP 污染）
-- `hostname`: 节点在控制面板显示的名称（不传则由 Sing-Box 1.14 自动使用系统主机名/设备名）
-- `tags` / `advertise_tags`: 逗号分隔的 ACL 标签列表，如 `tag:luoking,tag:luoking-share,tag:relay,tag:rephael`（可省略 `tag:` 前缀）
-- `auth_key` / `key`: Headscale 预授权 Key（不传则通过客户端或 Web 面板交互式登录）
-- `accept_routes`: 是否接受子网路由广播（默认 `true`）
-- `listen_port`: WireGuard P2P 监听 UDP 端口（默认 `41641`）
-- `relay_server_port`: Peer Relay 对等中继监听端口（如 `40000`）
-- `relay_server_static_endpoints`: 逗号分隔的对等中继静态公网端点（如 `8.134.36.157:40000`）
-- `ssh_server`: 是否启用内置 Tailscale SSH/SFTP 服务端（`true` 或 `false`）
-- `taildrop_directory` / `taildrop`: Taildrop 文件接收保存目录
-- `state_directory`: 状态持久化目录
-- `advertise_routes`: 逗号分隔的广播子网路由 CIDR（如 `192.168.31.0/24`）
-- `advertise_exit_node`: 是否将本节点广播为出口节点（`true` 或 `false`）
-- `exit_node`: 指定使用的出口节点名称或 IP
-- `tag`: Endpoint 标签名（默认 `tailscale-ep`）
+- **控制面与身份**：
+  - `control_url` / `url`: Headscale 控制面完整地址（传入后自动注入控制面域名直连 DNS 规则防 FakeIP 污染）
+  - `auth_key` / `key`: Headscale 预授权 Key（不传则通过客户端或 Web 面板交互式登录）
+  - `hostname`: 节点在控制面板显示的名称（不传则由 Sing-Box 1.14 自动使用系统主机名/设备名）
+  - `tags` / `advertise_tags`: 逗号分隔的 ACL 标签列表，如 `tag:luoking,tag:luoking-share,tag:relay,tag:rephael`（不传则作为个人设备，支持 Taildrop）
+- **核心路由与中继控制**：
+  - **是否广播内网地址** (`advertise_routes` / `routes`): 逗号分隔的广播内网子网 CIDR（如 `advertise_routes=192.168.31.0/24`）；不传或传 `false` 则不广播内网地址。
+  - **是否接收地址** (`accept_routes` / `accept`): 是否接收其他节点广播的子网路由，传 `true` 或 `false`（默认 `true`）。
+  - **是否作为 Peer Relay 节点** (`peer_relay` / `relay` / `relay_server_port`):
+    - 传 `peer_relay=true`（或 `relay=true`）：启用 Peer Relay 并默认监听 `40000` 端口；
+    - 传具体端口号如 `peer_relay=40000`（或 `relay_server_port=40000`）：启用并监听指定端口；
+    - 配合 `relay_endpoints` / `relay_server_static_endpoints`（如 `relay_endpoints=8.134.36.157:40000`）：指定静态公网中继地址；
+    - 不传或传 `false`：不作为 Peer Relay 节点。
+- **其他可选参数**：
+  - `listen_port`: WireGuard P2P 监听 UDP 端口（默认 `41641`）
+  - `ssh_server`: 是否启用内置 Tailscale SSH/SFTP 服务端（`true` 或 `false`）
+  - `taildrop_directory` / `taildrop`: Taildrop 文件接收保存目录
+  - `state_directory`: 状态持久化目录
+  - `advertise_exit_node`: 是否将本节点广播为出口节点（`true` 或 `false`）
+  - `exit_node`: 指定使用的出口节点名称或 IP
+  - `tag`: Endpoint 标签名（默认 `tailscale-ep`）
 

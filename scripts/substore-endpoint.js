@@ -15,14 +15,15 @@
  * - tags / advertise_tags: 逗号分隔的 ACL 标签列表，支持：
  *     tag:luoking, tag:luoking-share, tag:relay, tag:rephael（可省略 tag: 前缀）
  * - auth_key / key: 预授权密钥（不传则通过客户端或 Web 面板交互式登录）
- * - accept_routes: 是否接收子网路由广播，true 或 false（默认：true）
+ * - advertise_routes / routes: 逗号分隔的广播内网子网路由 CIDR（如 192.168.31.0/24；不传或传 false 则不广播）
+ * - accept_routes: 是否接收其他节点广播的子网路由，true 或 false（默认：true）
+ * - peer_relay / relay / relay_server_port: 是否作为 Peer Relay 对等中继节点：
+ *     传 true 默认监听 40000 端口；传具体数字（如 40000）则监听该端口；不传或传 false 则不作为 Peer Relay 节点
+ * - relay_endpoints / relay_server_static_endpoints: 逗号分隔的 Peer Relay 静态公网端点（如 8.134.36.157:40000）
  * - listen_port: WireGuard P2P 监听 UDP 端口（默认：41641）
- * - relay_server_port: Peer Relay 对等中继监听端口（如 40000）
- * - relay_server_static_endpoints: 逗号分隔的对等中继静态公网端点（如 8.134.36.157:40000）
  * - ssh_server: 是否启用内置 Tailscale SSH/SFTP 服务端，true 或 false
  * - taildrop_directory / taildrop: Taildrop 隔空传文件保存目录
  * - state_directory: 状态持久化目录
- * - advertise_routes: 逗号分隔的广播子网路由 CIDR（如 192.168.1.0/24）
  * - advertise_exit_node: 是否将本节点广播为出口节点，true 或 false
  * - exit_node: 指定使用的出口节点名称或 IP
  * - exit_node_allow_lan_access: 使用出口节点时是否允许局域网直连，true 或 false
@@ -56,6 +57,15 @@ function parseList(val) {
     .split(",")
     .map(s => s.trim())
     .filter(Boolean);
+}
+
+function parseBool(val, defaultVal) {
+  if (val === undefined || val === "") return defaultVal;
+  if (typeof val === "boolean") return val;
+  const s = String(val).trim().toLowerCase();
+  if (s === "true" || s === "1" || s === "yes") return true;
+  if (s === "false" || s === "0" || s === "no") return false;
+  return defaultVal;
 }
 
 function normalizeTags(tagsInput) {
@@ -132,14 +142,90 @@ function process() {
   } else {
     delete tsEndpoint.hostname;
   }
-  if (rawTags) {
+  if (rawTags && rawTags !== "false") {
     tsEndpoint.advertise_tags = normalizeTags(rawTags);
   } else {
     delete tsEndpoint.advertise_tags;
   }
-  if (args.accept_routes !== undefined) {
-    tsEndpoint.accept_routes = args.accept_routes !== "false";
+
+  // 3.1 是否接收地址（accept_routes，默认保留模板值 true，可通过 accept_routes=false 关闭）
+  const acceptRoutesArg = args.accept_routes !== undefined ? args.accept_routes : args.accept;
+  if (acceptRoutesArg !== undefined && acceptRoutesArg !== "") {
+    tsEndpoint.accept_routes = parseBool(acceptRoutesArg, true);
   }
+
+  // 3.2 是否广播内网地址（advertise_routes / routes，不传或传 false 则不广播）
+  const rawRoutes = args.advertise_routes !== undefined ? args.advertise_routes : args.routes;
+  if (rawRoutes && rawRoutes !== "false" && rawRoutes !== "0") {
+    const routeList = parseList(rawRoutes);
+    if (routeList.length > 0) {
+      tsEndpoint.advertise_routes = routeList;
+    } else {
+      delete tsEndpoint.advertise_routes;
+    }
+  } else {
+    delete tsEndpoint.advertise_routes;
+  }
+
+  // 3.3 是否作为 Peer Relay 节点（peer_relay / relay / relay_server_port & relay_endpoints / relay_server_static_endpoints）
+  const rawRelay =
+    args.relay_server_port !== undefined
+      ? args.relay_server_port
+      : args.peer_relay !== undefined
+      ? args.peer_relay
+      : args.relay;
+  const rawRelayEndpoints =
+    args.relay_server_static_endpoints !== undefined
+      ? args.relay_server_static_endpoints
+      : args.relay_endpoints;
+  const relayEndpointsList =
+    rawRelayEndpoints && rawRelayEndpoints !== "false" && rawRelayEndpoints !== "0"
+      ? parseList(rawRelayEndpoints)
+      : [];
+
+  if (rawRelay !== undefined && rawRelay !== "") {
+    const relayStr = String(rawRelay).trim().toLowerCase();
+    if (relayStr === "false" || relayStr === "0" || relayStr === "no") {
+      delete tsEndpoint.relay_server_port;
+      delete tsEndpoint.relay_server_static_endpoints;
+    } else if (relayStr === "true" || relayStr === "yes") {
+      // 若传 peer_relay=true，优先从静态端点提取端口，否则默认使用 40000
+      let inferredPort = 40000;
+      if (relayEndpointsList.length > 0) {
+        const m = relayEndpointsList[0].match(/:(\d+)$/);
+        if (m) inferredPort = parseInt(m[1], 10);
+      }
+      tsEndpoint.relay_server_port = inferredPort;
+      if (relayEndpointsList.length > 0) {
+        tsEndpoint.relay_server_static_endpoints = relayEndpointsList;
+      } else {
+        delete tsEndpoint.relay_server_static_endpoints;
+      }
+    } else {
+      const parsedPort = parseInt(relayStr, 10);
+      if (!isNaN(parsedPort) && parsedPort > 0) {
+        tsEndpoint.relay_server_port = parsedPort;
+        if (relayEndpointsList.length > 0) {
+          tsEndpoint.relay_server_static_endpoints = relayEndpointsList;
+        } else {
+          delete tsEndpoint.relay_server_static_endpoints;
+        }
+      } else {
+        delete tsEndpoint.relay_server_port;
+        delete tsEndpoint.relay_server_static_endpoints;
+      }
+    }
+  } else if (relayEndpointsList.length > 0) {
+    // 仅传了 relay_endpoints 时也自动开启 Peer Relay
+    const m = relayEndpointsList[0].match(/:(\d+)$/);
+    tsEndpoint.relay_server_port = m ? parseInt(m[1], 10) : 40000;
+    tsEndpoint.relay_server_static_endpoints = relayEndpointsList;
+  } else {
+    delete tsEndpoint.relay_server_port;
+    delete tsEndpoint.relay_server_static_endpoints;
+  }
+
+  // 3.4 其他可选参数
   if (args.listen_port !== undefined && args.listen_port !== "") {
     tsEndpoint.listen_port = parseInt(args.listen_port, 10);
   }
@@ -150,32 +236,23 @@ function process() {
     tsEndpoint.taildrop_directory = args.taildrop_directory || args.taildrop;
   }
   if (args.ssh_server !== undefined && args.ssh_server !== "") {
-    if (args.ssh_server === "false") {
+    if ( !parseBool(args.ssh_server, true) ) {
       delete tsEndpoint.ssh_server;
     } else {
       tsEndpoint.ssh_server = true;
     }
   }
-  if (args.relay_server_port !== undefined && args.relay_server_port !== "") {
-    tsEndpoint.relay_server_port = parseInt(args.relay_server_port, 10);
-  }
-  if (args.relay_server_static_endpoints) {
-    tsEndpoint.relay_server_static_endpoints = parseList(args.relay_server_static_endpoints);
-  }
-  if (args.advertise_routes) {
-    tsEndpoint.advertise_routes = parseList(args.advertise_routes);
-  }
   if (args.advertise_exit_node !== undefined && args.advertise_exit_node !== "") {
-    tsEndpoint.advertise_exit_node = args.advertise_exit_node === "true";
+    tsEndpoint.advertise_exit_node = parseBool(args.advertise_exit_node, false);
   }
   if (args.exit_node) {
     tsEndpoint.exit_node = args.exit_node;
   }
   if (args.exit_node_allow_lan_access !== undefined && args.exit_node_allow_lan_access !== "") {
-    tsEndpoint.exit_node_allow_lan_access = args.exit_node_allow_lan_access === "true";
+    tsEndpoint.exit_node_allow_lan_access = parseBool(args.exit_node_allow_lan_access, false);
   }
   if (args.ephemeral !== undefined && args.ephemeral !== "") {
-    tsEndpoint.ephemeral = args.ephemeral === "true";
+    tsEndpoint.ephemeral = parseBool(args.ephemeral, false);
   }
 
   // 4. 自动同步 MagicDNS 与控制面直连 DNS 解析

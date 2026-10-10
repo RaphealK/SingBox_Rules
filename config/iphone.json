@@ -11,7 +11,8 @@
         "type": "fakeip",
         "inet4_range": "198.18.0.0/16"
       },
-      {"type": "hosts", "tag": "hosts", "predefined": {"doh.pub": ["1.12.12.21", "120.53.53.53"]}}
+      {"type": "hosts", "tag": "hosts", "predefined": {"doh.pub": ["1.12.12.21", "120.53.53.53"]}},
+      {"tag": "ts-dns", "type": "tailscale", "endpoint": "tailscale-ep", "accept_search_domain": true}
     ],
     "rules": [
       {"query_type": ["HTTPS", "SVCB", "AAAA"], "action": "reject"},
@@ -19,13 +20,12 @@
       {"clash_mode": "Direct", "server": "local"},
       {"clash_mode": "Global", "server": "fakeip"},
       {"rule_set": "BlockAD", "action": "reject"},
-      {"domain_suffix": ["luokinging.com"], "server": "ali"},
+      {"preferred_by": "tailscale-ep", "server": "ts-dns"},
       {
         "rule_set": [
           "fakeipfilter-cn",
           "geosite-cn",
           "geosite-microsoft@cn",
-          "geosite-apple@cn",
           "geosite-apple",
           "geosite-private",
           "geosite-category-games@cn",
@@ -57,7 +57,7 @@
     "reverse_mapping": true
   },
   "outbounds": [
-    {"tag": "🌍 Proxy", "type": "selector", "outbounds": ["🎯 Direct"]},
+    {"tag": "🌍 Proxy", "type": "selector", "outbounds": []},
     {"tag": "🤖 AI", "type": "selector", "outbounds": ["🌍 Proxy", "🎯 Direct"]},
     {"tag": "📹 YouTube", "type": "selector", "outbounds": ["🌍 Proxy", "🎯 Direct"]},
     {"tag": "🔍 Google", "type": "selector", "outbounds": ["🌍 Proxy", "🎯 Direct"]},
@@ -128,30 +128,15 @@
         "outbound": "🎯 Direct"
       },
       {
-        "domain": [
-          "mesh.luokinging.com"
-        ],
-        "outbound": "🎯 Direct"
-      },
-      {
         "ip_version": 6,
         "action": "reject",
         "no_drop": true
       },
       {
-        "ip_cidr": [
-          "100.64.0.0/10",
-          "10.10.0.0/16"
+        "preferred_by": [
+          "tailscale-ep"
         ],
         "outbound": "tailscale-ep"
-      },
-      {
-        "domain": [
-          "controlplane.tailscale.com",
-          "login.tailscale.com",
-          "logs.tailscale.com"
-        ],
-        "outbound": "🌍 Proxy"
       },
       {
         "ip_is_private": true,
@@ -173,9 +158,8 @@
       {"clash_mode": "Global", "outbound": "🌐 Global"},
       {"rule_set": "BlockAD", "action": "reject"},
       {"protocol": ["ssh", "bittorrent"], "outbound": "🎯 Direct"},
-
       {"rule_set": "geosite-private", "outbound": "🎯 Direct"},
-      {"rule_set": ["geosite-apple", "geosite-apple@cn"], "outbound": "🎯 Direct"},
+      {"rule_set": "geosite-apple", "outbound": "🎯 Direct"},
       {"rule_set": "geosite-category-ai-!cn", "outbound": "🤖 AI"},
       {"rule_set": "geosite-youtube", "outbound": "📹 YouTube"},
       {"rule_set": "geosite-google", "outbound": "🔍 Google"},
@@ -184,12 +168,8 @@
       {"rule_set": "geosite-microsoft@cn", "outbound": "🎯 Direct"},
       {"rule_set": "geosite-microsoft", "outbound": "Ⓜ️ Microsoft"},
       {"rule_set": "geosite-telegram", "outbound": "✈️ Telegram"},
-      {"rule_set": "geosite-paypal", "outbound": "💳 Wallet"},
-      {"rule_set": "geosite-binance", "outbound": "💳 Wallet"},
-      {"rule_set": "geosite-okx", "outbound": "💳 Wallet"},
-      {"rule_set": "geosite-category-cryptocurrency", "outbound": "💳 Wallet"},
-      {"rule_set": ["geosite-category-games@cn", "geosite-steam@cn"], "outbound": "🎯 Direct"},
-      {"rule_set": "Game", "outbound": "🎯 Direct"},
+      {"rule_set": ["geosite-paypal", "geosite-category-cryptocurrency"], "outbound": "💳 Wallet"},
+      {"rule_set": ["geosite-category-games@cn", "geosite-steam@cn", "Game"], "outbound": "🎯 Direct"},
       {"rule_set": "geosite-steam", "outbound": "🎮 Steam"},
       {"rule_set": "geosite-geolocation-!cn", "outbound": "🌍 Proxy"},
       {"inbound": "mixed-in", "action": "resolve"},
@@ -216,11 +196,8 @@
           "geosite-microsoft",
           "geosite-microsoft@cn",
           "geosite-apple",
-          "geosite-apple@cn",
           "geosite-telegram",
           "geosite-paypal",
-          "geosite-binance",
-          "geosite-okx",
           "geosite-category-cryptocurrency",
           "geosite-steam@cn",
           "geosite-steam",
@@ -284,10 +261,8 @@
     {
       "type": "tailscale",
       "tag": "tailscale-ep",
-      "control_url": "https://mesh.luokinging.com",
-      "auth_key": "tskey-auth-xxxxxxxxxxxx",
-      "hostname": "iphone-singbox",
-      "accept_routes": true
+      "accept_routes": true,
+      "listen_port": 41641
     }
   ],
   "experimental": {

@@ -78,7 +78,7 @@
 
 ## 4. Sub-Store 节点填充脚本参考
 
-四端配置文件中的地区策略组（`日本手动`、`狮城手动`、`香港手动`、`美国手动`、`手动选择`、`自动选择`）默认留空 `"outbounds": []`，统一通过 **Sub-Store** 远程脚本自动填充节点：
+五端配置文件中的 `🌍 Proxy` 核心代理策略组默认留空 `"outbounds": []`，杜绝自动更新时默认回退到直连，统一通过 **Sub-Store** 远程脚本自动填充节点：
 
 ```text
 https://gh-proxy.com/https://raw.githubusercontent.com/xream/scripts/main/surge/modules/sub-store-scripts/sing-box/template.js#type=组合订阅&name=singbox&outbound=🕳ℹ️手动选择|自动选择🏷ℹ️^(?!.*(?:官网|剩余|流量|套餐|免费|订阅|到期时间|直连|GB|Expire Date|Traffic|ExpireDate)).*🕳ℹ️香港手动🏷ℹ️^(?!.*(?:ZJ|zijian|自建)).*(🇭🇰|HK|hk|香港|港|HongKong)🕳ℹ️日本手动🏷ℹ️^(?!.*(?:ZJ|zijian|自建)).*(🇯🇵|JP|jp|日本|日|Japan)🕳ℹ️狮城手动🏷ℹ️^(?!.*(?:ZJ|zijian|自建)).*(新加坡|坡|狮城|SG|Singapore)🕳ℹ️美国手动🏷ℹ️^(?!.*(?:ZJ|zijian|自建|AUS|RUS)).*(🇺🇸|US|us|美国|美|United States)
@@ -99,22 +99,37 @@ https://gh-proxy.com/https://raw.githubusercontent.com/xream/scripts/main/surge/
 
 ---
 
-## 5. Sub-Store 动态配置 Tailscale / Headscale Endpoint 脚本
+## 5. Sub-Store 动态配置 Tailscale / Headscale Endpoint (1.14 全特性) 脚本
 
-为避免在客户端配置文件中明文写死自建 Headscale 地址与认证密钥，本仓库提供了专属的处理脚本 [`scripts/substore-endpoint.js`](file:///d:/Git/SingBox_Rules/scripts/substore-endpoint.js)。
+四端配置文件模板中默认**不硬编码** `control_url`、`hostname`、`advertise_tags`、`auth_key` 等私有信息与冗余规则，全部通过专属脚本 [`scripts/substore-endpoint.js`](file:///d:/Git/SingBox_Rules/scripts/substore-endpoint.js) 的 URL Hash 参数动态传入控制。
+
+### 四端内置 1.14 精简架构与能力概览
+- **零硬编码默认模板**：默认仅开启 `accept_routes: true`、`listen_port: 41641` 及平台对应的 `ssh_server: true`（`iphone.json` 因 iOS 沙盒限制不开启）。
+- **原生 MagicDNS (`ts-dns`)**：启用 `accept_search_domain: true` 与 `preferred_by: "tailscale-ep"`，支持单标签短主机名直连。
+- **动态子网路由 (`preferred_by`)**：移除硬编码的 `100.64.0.0/10` 等冗余规则，统一由 `preferred_by: ["tailscale-ep"]` 动态匹配 Tailscale 虚拟内网及所有远端子网路由。
+- **全动态传参注入**：支持按需注入 `control_url`、`hostname`、`auth_key` 及 4 个 ACL 标签（`tag:luoking`、`tag:luoking-share`、`tag:relay`、`tag:rephael`）。
 
 ### 使用方法
 在 Sub-Store 的【订阅产物 (Artifact)】中，为对应 Sing-box 配置添加该脚本作为处理脚本，并通过 URL Hash 传递你的私有配置参数：
 
 ```text
-https://gh-proxy.com/https://raw.githubusercontent.com/RaphealK/SingBox_Rules/main/scripts/substore-endpoint.js#control_url=https://headscale.yourdomain.com&auth_key=tskey-auth-xxxxxx&hostname=iphone-box&accept_routes=true
+https://gh-proxy.com/https://raw.githubusercontent.com/RaphealK/SingBox_Rules/main/scripts/substore-endpoint.js#control_url=https://mesh.luokinging.com&auth_key=tskey-auth-xxxxxx&hostname=windows-singbox&tags=tag:luoking,tag:luoking-share,tag:relay,tag:rephael
 ```
 
 ### 脚本参数说明
-- `control_url`: 你的 Headscale 控制面完整地址（例如 `https://headscale.yourdomain.com`）
-- `auth_key`: Headscale 预授权 Key（可选，填入后免手动验证登录）
-- `hostname`: 节点在控制面板显示的名称（如 `iphone-box`, `windows-pc`）
+- `control_url` / `url`: Headscale 控制面完整地址（传入后自动注入控制面域名直连 DNS 规则防 FakeIP 污染）
+- `hostname`: 节点在控制面板显示的名称（不传则由 Sing-Box 1.14 自动使用系统主机名/设备名）
+- `tags` / `advertise_tags`: 逗号分隔的 ACL 标签列表，如 `tag:luoking,tag:luoking-share,tag:relay,tag:rephael`（可省略 `tag:` 前缀）
+- `auth_key` / `key`: Headscale 预授权 Key（不传则通过客户端或 Web 面板交互式登录）
 - `accept_routes`: 是否接受子网路由广播（默认 `true`）
+- `listen_port`: WireGuard P2P 监听 UDP 端口（默认 `41641`）
+- `relay_server_port`: Peer Relay 对等中继监听端口（如 `40000`）
+- `relay_server_static_endpoints`: 逗号分隔的对等中继静态公网端点（如 `8.134.36.157:40000`）
+- `ssh_server`: 是否启用内置 Tailscale SSH/SFTP 服务端（`true` 或 `false`）
+- `taildrop_directory` / `taildrop`: Taildrop 文件接收保存目录
+- `state_directory`: 状态持久化目录
+- `advertise_routes`: 逗号分隔的广播子网路由 CIDR（如 `192.168.1.0/24`）
+- `advertise_exit_node`: 是否将本节点广播为出口节点（`true` 或 `false`）
+- `exit_node`: 指定使用的出口节点名称或 IP
 - `tag`: Endpoint 标签名（默认 `tailscale-ep`）
 
-> **自动特性**：该脚本在注入 Tailscale Endpoint 的同时，会自动将你传入的 Headscale 域名补充进控制面分流规则中，并确保虚拟内网 `100.64.0.0/10` 精准绑定到该端点。

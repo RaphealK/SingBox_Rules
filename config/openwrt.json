@@ -297,12 +297,6 @@
       "store_dns": true,
       "buffer_size": "2MB",
       "flush_interval": "5m"
-    },
-    "clash_api": {
-      "external_controller": "0.0.0.0:9095",
-      "external_ui": "/etc/sing-box/ui",
-      "secret": "passwd",
-      "default_mode": "Rule"
     }
   },
   "certificate": {

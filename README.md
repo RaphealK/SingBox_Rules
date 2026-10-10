@@ -30,14 +30,14 @@
 | 模块 / 配置项 | `windows.json` (Windows) | `linux.json` (Linux) | `openwrt.json` (OpenWrt) | `android.json` (Android Root) | `iphone.json` (iPhone) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **特殊出站 (`outbounds`)** | 额外包含 `🌉 Bridge` (bridge) | 无 | 无 | 无 | 无 |
-| **首条路由 (`route.rules[0]`)** | `preferred_by: ["🌉 Bridge"]` 走桥接（含内网/国内 IP） | 非全局模式下私有/Tailscale/国内 IP `bypass` | 非全局模式下私有/Tailscale/国内 IP `bypass` | 非全局模式下私有/Tailscale/国内 IP `bypass` | 无（直接从 sniff 开始） |
+| **首条路由 (`route.rules[0]`)** | `preferred_by: ["🌉 Bridge"]` 走桥接（含内网/国内 IP） | `tun-in` 非全局下私有/非 Tailscale/国内 IP `bypass` | `tun-in` 非全局下私有/非 Tailscale/国内 IP `bypass` | 非全局下私有/非 Tailscale/国内 IP `bypass` | 无（直接从 sniff 开始） |
 | **TUN 入站** | `platform.http_proxy` (`127.0.0.1:7890`) | `auto_redirect: true` | `auto_redirect: true` | `auto_redirect: true` (支持 Root 内核重定向) | `platform.http_proxy` (`127.0.0.1:7890`) |
 | **混合入站** | `0.0.0.0:7890` | `0.0.0.0:7890` | `0.0.0.0:7890` | `127.0.0.1:7890`（移动安全绑定） | `127.0.0.1:7890`（移动安全绑定） |
 | **API 服务** | `0.0.0.0:9090`，路径 `"dashboard"` | `0.0.0.0:9090`，路径 `"/etc/sing-box/dashboard"` | `0.0.0.0:7714`，路径 `"/etc/sing-box/dashboard"` | 无（由安卓客户端 UI 接管） | 无（由 iOS 客户端接管） |
 | **Clash API** | 无 | `0.0.0.0:9095` | `0.0.0.0:9095` | 无 | 无 |
 | **缓存文件** | `store_dns: true` | `path: /etc/sing-box/cache.db`, `store_dns: true` | `path: /etc/sing-box/cache.db`, `store_dns: true` | 仅 `enabled: true` | 仅 `enabled: true` |
 | **NTP 同步** | 启用 (`time.apple.com`) | 启用 (`time.apple.com`) | 启用 (`time.apple.com`) | 无 | 无 |
-| **Headscale / Tailscale** | ✅ 原生端点 (`windows-singbox`) | ✅ 原生端点 (`linux-singbox`) | ✅ 路由进程直连 + 内核 bypass | ✅ 原生端点 (`android-singbox`) | ✅ 原生端点 (`iphone-singbox`) |
+| **Headscale / Tailscale** | ✅ 原生端点 (`tailscale-ep`) | ✅ 原生端点 (`tailscale-ep`) | ✅ 原生端点 (`tailscale-ep`) | ✅ 原生端点 (`tailscale-ep`) | ✅ 原生端点 (`tailscale-ep`) |
 | **应用包名分流 (`package_name`)** | 无 | 无 | 无 | ✅ 微信/支付宝/网银/高德 App 强制直连防风控 | 无（iOS 系统沙盒限制） |
 | **策略组命名风格** | **统一 Emoji + 英文**（支持各业务组独立选节点） | **统一 Emoji + 英文**（支持各业务组独立选节点） | **统一 Emoji + 英文**（支持各业务组独立选节点） | **统一 Emoji + 英文**（支持各业务组独立选节点） | **统一 Emoji + 英文**（支持各业务组独立选节点） |
 | **DNS 架构** | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + `prefer_ipv4` + FakeIP 双栈 | **HTTP/3 (`ali`)** + 纯 IPv4（TUN 仅 IPv4，拦截 AAAA 与 IPv6） | **HTTP/3 (`ali`)** + 纯 IPv4（TUN 仅 IPv4，拦截 AAAA 与 IPv6） |
@@ -60,7 +60,7 @@
 4. **未知域名探测**：对非 `geosite-geolocation-!cn` 的 `A/AAAA` 查询，先通过 `google` 携带 `client_subnet: 223.5.5.0/24` 进行 `evaluate` 评估；若返回 IP 命中 `geoip-cn` 则交由 `ali` 解析，否则分配 `fakeip`（`198.19.0.0/16`，`rewrite_ttl: 1`）。
 
 ### 3.2 新增或调整分流规则
-当需要新增一个业务分流（例如新增规则集与对应策略组）时，按顺序在四端同步修改 3 处：
+当需要新增一个业务分流（例如新增规则集与对应策略组）时，按顺序在五端同步修改 3 处：
 1. **`outbounds`**：
    - 在业务策略组区域新增 `{"tag": "策略名", "type": "selector", "outbounds": ["日本手动", "狮城手动", "香港手动", "美国手动", "手动选择", "自动选择"]}`。
    - 将 `"策略名"` 同步加入 `"GLOBAL"` 策略组的 `outbounds` 列表中。
@@ -72,7 +72,7 @@
 ### 3.3 维护 FakeIP 过滤列表 (`rules/`)
 - 若国内应用/网银/本地服务因 FakeIP 异常，将域名补充至 [`rules/fakeipfilter-cn.json`](file:///d:/Git/SingBox_Rules/rules/fakeipfilter-cn.json)。
 - 若海外游戏/语音/STUN/NTP 服务因 FakeIP 异常，将域名补充至 [`rules/fakeipfilter-!cn.json`](file:///d:/Git/SingBox_Rules/rules/fakeipfilter-!cn.json)。
-- 若 Fork 到个人仓库使用，请将四端配置 `route.rule_set` 中 `fakeipfilter-cn` / `fakeipfilter-!cn` 的 `url` 替换为自己的仓库地址。
+- 若 Fork 到个人仓库使用，请将五端配置 `route.rule_set` 中 `fakeipfilter-cn` / `fakeipfilter-!cn` 的 `url` 替换为自己的仓库地址。
 
 ---
 
@@ -90,7 +90,7 @@ https://gh-proxy.com/https://raw.githubusercontent.com/xream/scripts/main/surge/
 - `🕳ℹ️策略组名称🏷ℹ️正则表达式`：用于将匹配的节点注入对应策略组，如需排除或包含自建节点，可按需调整正则中的 `(?!.*(?:ZJ|zijian|自建))` 条件。
 
 > [!TIP]
-> **四端 Sub-Store 节点注入参考（支持业务组独立选节点）**：
+> **五端 Sub-Store 节点注入参考（支持业务组独立选节点）**：
 > 当前配置已精简为统一 Emoji 英文命名，若希望 `🌍 Proxy` 拥有全部节点，且 `🤖 AI`、`📹 YouTube`、`🔍 Google` 等业务组也能单独点选具体节点，可在 Sub-Store 模板参数中指定：
 > ```text
 > #outbound=🕳ℹ️🌍 Proxy|🤖 AI|📹 YouTube|🔍 Google|🐙 GitHub|✈️ Telegram|💳 Wallet|🎮 Steam|Ⓜ️ Microsoft|☁️ OneDrive🏷ℹ️^(?!.*(?:官网|剩余|流量|套餐|免费|订阅|到期时间|直连|GB|Expire Date|Traffic|ExpireDate)).*
@@ -101,19 +101,19 @@ https://gh-proxy.com/https://raw.githubusercontent.com/xream/scripts/main/surge/
 
 ## 5. Sub-Store 动态配置 Tailscale / Headscale Endpoint (1.14 全特性) 脚本
 
-四端配置文件模板中默认**不硬编码** `control_url`、`hostname`、`advertise_tags`、`auth_key` 等私有信息与冗余规则，全部通过专属脚本 [`scripts/substore-endpoint.js`](file:///d:/Git/SingBox_Rules/scripts/substore-endpoint.js) 的 URL Hash 参数动态传入控制。
+五端配置文件模板中默认**不硬编码** `control_url`、`hostname`、`advertise_tags`、`auth_key`、`advertise_routes` 等私有信息与冗余规则，全部通过专属脚本 [`scripts/substore-endpoint.js`](file:///d:/Git/SingBox_Rules/scripts/substore-endpoint.js) 的 URL Hash 参数动态传入控制。
 
-### 四端内置 1.14 精简架构与能力概览
+### 五端内置 1.14 精简架构与能力概览
 - **零硬编码默认模板**：默认仅开启 `accept_routes: true`、`listen_port: 41641` 及平台对应的 `ssh_server: true`（`iphone.json` 因 iOS 沙盒限制不开启）。
-- **原生 MagicDNS (`ts-dns`)**：启用 `accept_search_domain: true` 与 `preferred_by: "tailscale-ep"`，支持单标签短主机名直连。
-- **动态子网路由 (`preferred_by`)**：移除硬编码的 `100.64.0.0/10` 等冗余规则，统一由 `preferred_by: ["tailscale-ep"]` 动态匹配 Tailscale 虚拟内网及所有远端子网路由。
-- **全动态传参注入**：支持按需注入 `control_url`、`hostname`、`auth_key` 及 4 个 ACL 标签（`tag:luoking`、`tag:luoking-share`、`tag:relay`、`tag:rephael`）。
+- **原生 MagicDNS (`ts-dns`)**：启用 `accept_search_domain: true` 与 `preferred_by: "ts-dns"`，支持单标签短主机名直连。
+- **动态子网路由 (`preferred_by`)**：移除硬编码的 `100.64.0.0/10` 等冗余规则，统一由 `preferred_by: ["tailscale-ep"]` 动态匹配 Tailscale 虚拟内网及所有远端子网路由；OpenWrt / Linux 同时支持异地设备入站访问局域网子网路由（自动用户态 SNAT 转发）。
+- **全动态传参注入**：支持按需注入 `control_url`、`hostname`、`auth_key`、`advertise_routes` 及 4 个 ACL 标签（`tag:luoking`、`tag:luoking-share`、`tag:relay`、`tag:rephael`）。
 
 ### 使用方法
 在 Sub-Store 的【订阅产物 (Artifact)】中，为对应 Sing-box 配置添加该脚本作为处理脚本，并通过 URL Hash 传递你的私有配置参数：
 
 ```text
-https://gh-proxy.com/https://raw.githubusercontent.com/RaphealK/SingBox_Rules/main/scripts/substore-endpoint.js#control_url=https://mesh.luokinging.com&auth_key=tskey-auth-xxxxxx&hostname=windows-singbox&tags=tag:luoking,tag:luoking-share,tag:relay,tag:rephael
+https://gh-proxy.com/https://raw.githubusercontent.com/RaphealK/SingBox_Rules/main/scripts/substore-endpoint.js#control_url=https://mesh.luokinging.com&auth_key=tskey-auth-xxxxxx&advertise_routes=192.168.31.0/24&tags=tag:luoking,tag:luoking-share,tag:relay,tag:rephael
 ```
 
 ### 脚本参数说明
@@ -128,7 +128,7 @@ https://gh-proxy.com/https://raw.githubusercontent.com/RaphealK/SingBox_Rules/ma
 - `ssh_server`: 是否启用内置 Tailscale SSH/SFTP 服务端（`true` 或 `false`）
 - `taildrop_directory` / `taildrop`: Taildrop 文件接收保存目录
 - `state_directory`: 状态持久化目录
-- `advertise_routes`: 逗号分隔的广播子网路由 CIDR（如 `192.168.1.0/24`）
+- `advertise_routes`: 逗号分隔的广播子网路由 CIDR（如 `192.168.31.0/24`）
 - `advertise_exit_node`: 是否将本节点广播为出口节点（`true` 或 `false`）
 - `exit_node`: 指定使用的出口节点名称或 IP
 - `tag`: Endpoint 标签名（默认 `tailscale-ep`）

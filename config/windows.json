@@ -20,7 +20,7 @@
       {"clash_mode": "Direct", "server": "local"},
       {"clash_mode": "Global", "server": "fakeip"},
       {"rule_set": "BlockAD", "action": "reject"},
-      {"preferred_by": "tailscale-ep", "server": "ts-dns"},
+      {"preferred_by": "ts-dns", "server": "ts-dns"},
       {
         "rule_set": [
           "fakeipfilter-cn",

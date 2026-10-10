@@ -12,14 +12,15 @@
         "inet4_range": "198.19.0.0/16",
         "inet6_range": "fc00::/18"
       },
-      {"type": "hosts", "tag": "hosts", "predefined": {"doh.pub": ["1.12.12.21", "120.53.53.53"]}}
+      {"type": "hosts", "tag": "hosts", "predefined": {"doh.pub": ["1.12.12.21", "120.53.53.53"]}},
+      {"tag": "ts-dns", "type": "tailscale", "endpoint": "tailscale-ep", "accept_search_domain": true}
     ],
     "rules": [
       {"query_type": ["HTTPS", "SVCB"], "action": "reject"},
       {"clash_mode": "Direct", "server": "local"},
       {"clash_mode": "Global", "server": "fakeip"},
       {"rule_set": "BlockAD", "action": "reject"},
-      {"domain_suffix": ["luokinging.com"], "server": "ali"},
+      {"preferred_by": "ts-dns", "server": "ts-dns"},
       {
         "rule_set": [
           "fakeipfilter-cn",
@@ -99,31 +100,18 @@
   "route": {
     "rules": [
       {
-        "domain_suffix": [
-          "luokinging.com"
-        ],
-        "action": "bypass",
-        "outbound": "🎯 Direct"
-      },
-      {
-        "ip_cidr": [
-          "8.134.36.157/32"
-        ],
-        "action": "bypass",
-        "outbound": "🎯 Direct"
-      },
-      {
         "type": "logical",
         "mode": "and",
         "rules": [
+          {"inbound": "tun-in"},
           {"port": [53, 853], "invert": true},
           {"clash_mode": "Global", "invert": true},
+          {"preferred_by": ["tailscale-ep"], "invert": true},
           {
             "type": "logical",
             "mode": "or",
             "rules": [
               {"ip_is_private": true},
-              {"ip_cidr": ["100.64.0.0/10", "10.10.0.0/16", "fd7a:115c:a1e0::/48"]},
               {"rule_set": "geoip-cn"}
             ]
           }
@@ -153,16 +141,13 @@
         "action": "hijack-dns"
       },
       {
-        "process_name": [
-          "tailscaled",
-          "tailscale"
+        "preferred_by": [
+          "tailscale-ep"
         ],
-        "action": "bypass",
-        "outbound": "🎯 Direct"
+        "outbound": "tailscale-ep"
       },
       {
         "ip_is_private": true,
-        "action": "bypass",
         "outbound": "🎯 Direct"
       },
       {
@@ -272,19 +257,24 @@
         "fdfe:dcba:9876::1/126"
       ],
       "auto_route": true,
-      "auto_redirect": true,
-      "route_exclude_address": [
-        "100.64.0.0/10",
-        "10.10.0.0/16",
-        "fd7a:115c:a1e0::/48",
-        "8.134.36.157/32"
-      ]
+      "auto_redirect": true
     },
     {
       "tag": "mixed-in",
       "type": "mixed",
       "listen": "0.0.0.0",
       "listen_port": 7890
+    }
+  ],
+  "endpoints": [
+    {
+      "type": "tailscale",
+      "tag": "tailscale-ep",
+      "state_directory": "/etc/sing-box/tailscale",
+      "accept_routes": true,
+      "listen_port": 41641,
+      "ssh_server": true,
+      "taildrop_directory": "/etc/sing-box/taildrop"
     }
   ],
   "services": [

@@ -198,7 +198,7 @@ function process() {
     if (Array.isArray(config.dns.rules)) {
       let tsDnsRule = config.dns.rules.find(r => r.server === "ts-dns");
       if (tsDnsRule) {
-        tsDnsRule.preferred_by = tag;
+        tsDnsRule.preferred_by = "ts-dns";
       }
       // 若传入了自定义 control_url，确保其域名通过 ali 直连解析防止 FakeIP 污染
       if (controlHost) {

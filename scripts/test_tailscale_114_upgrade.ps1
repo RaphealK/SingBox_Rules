@@ -21,7 +21,7 @@ foreach ($cfg in $allConfigs) {
     }
 }
 
-$tsConfigs = @("windows.json", "linux.json", "android.json", "iphone.json")
+$tsConfigs = @("windows.json", "linux.json", "openwrt.json", "android.json", "iphone.json")
 
 foreach ($cfg in $tsConfigs) {
     $path = Join-Path "config" $cfg
@@ -58,9 +58,9 @@ foreach ($cfg in $tsConfigs) {
     if ($null -eq $tsDns -or $tsDns.type -ne "tailscale" -or $tsDns.accept_search_domain -ne $true) {
         throw "$cfg 的 ts-dns 配置不正确"
     }
-    $tsDnsRule = $json.dns.rules | Where-Object { $_.preferred_by -eq "tailscale-ep" -and $_.server -eq "ts-dns" }
+    $tsDnsRule = $json.dns.rules | Where-Object { $_.preferred_by -eq "ts-dns" -and $_.server -eq "ts-dns" }
     if ($null -eq $tsDnsRule) {
-        throw "$cfg 的 dns.rules 缺失 preferred_by: tailscale-ep 规则"
+        throw "$cfg 的 dns.rules 缺失 preferred_by: ts-dns 规则"
     }
 
     # 3. 验证已移除重复冗余的 Tailscale 路由规则，仅保留 preferred_by 动态路由
@@ -76,42 +76,45 @@ foreach ($cfg in $tsConfigs) {
     Write-Host "[OK] $cfg 精简无硬编码模板与规则去重断言通过！" -ForegroundColor Green
 }
 
-# 4. 验证 substore-endpoint.js 动态传参控制
+# 4. 验证 substore-endpoint.js 动态传参控制（以 openwrt.json 测试子网路由与控制面注入）
 Write-Host "`n--- 验证 substore-endpoint.js 动态传参注入 ---" -ForegroundColor Cyan
 $nodeTest = @'
 const fs = require('fs');
-const raw = fs.readFileSync('config/windows.json', 'utf8');
+const raw = fs.readFileSync('config/openwrt.json', 'utf8');
 
-// 测试 1: 不传参数时默认不生成 control_url / hostname / advertise_tags
+// 测试 1: 不传参数时默认不生成 control_url / hostname / advertise_tags / advertise_routes
 global.$content = raw;
 global.$arguments = '';
 delete require.cache[require.resolve('./scripts/substore-endpoint.js')];
 require('./scripts/substore-endpoint.js');
 const resEmpty = JSON.parse(global.$content);
 const epEmpty = resEmpty.endpoints[0];
-if (epEmpty.control_url || epEmpty.hostname || epEmpty.advertise_tags) {
-  throw new Error('未传参时不应生成 control_url / hostname / advertise_tags');
+if (epEmpty.control_url || epEmpty.hostname || epEmpty.advertise_tags || epEmpty.advertise_routes) {
+  throw new Error('未传参时不应生成 control_url / hostname / advertise_tags / advertise_routes');
 }
 
-// 测试 2: 传入 control_url, hostname, 4 个 tags 时精准注入
+// 测试 2: 传入 control_url, advertise_routes, 4 个 tags 时精准注入
 global.$content = raw;
-global.$arguments = 'control_url=https://mesh.luokinging.com&hostname=win-pc&tags=tag:luoking,tag:luoking-share,tag:relay,tag:rephael&auth_key=tskey-test&relay_server_port=40000';
+global.$arguments = 'control_url=https://mesh.luokinging.com&advertise_routes=192.168.31.0/24&tags=tag:luoking,tag:luoking-share,tag:relay,tag:rephael&auth_key=tskey-test&relay_server_port=40000';
 delete require.cache[require.resolve('./scripts/substore-endpoint.js')];
 require('./scripts/substore-endpoint.js');
 const resFull = JSON.parse(global.$content);
 const epFull = resFull.endpoints[0];
 
 if (epFull.control_url !== 'https://mesh.luokinging.com') throw new Error('control_url 注入失败');
-if (epFull.hostname !== 'win-pc') throw new Error('hostname 注入失败');
+if (epFull.hostname !== undefined) throw new Error('未传 hostname 时应保持 undefined 由设备自动获取');
 if (epFull.auth_key !== 'tskey-test') throw new Error('auth_key 注入失败');
 if (epFull.relay_server_port !== 40000) throw new Error('relay_server_port 注入失败');
+if (JSON.stringify(epFull.advertise_routes) !== JSON.stringify(['192.168.31.0/24'])) {
+  throw new Error('advertise_routes 注入不匹配: ' + JSON.stringify(epFull.advertise_routes));
+}
 const expected = ['tag:luoking', 'tag:luoking-share', 'tag:relay', 'tag:rephael'];
 if (JSON.stringify(epFull.advertise_tags) !== JSON.stringify(expected)) {
   throw new Error('advertise_tags 注入不匹配: ' + JSON.stringify(epFull.advertise_tags));
 }
 const hasControlDns = resFull.dns.rules.some(r => Array.isArray(r.domain) && r.domain.includes('mesh.luokinging.com') && r.server === 'ali');
 if (!hasControlDns) throw new Error('control_url 域名未自动注入直连 DNS 规则');
-console.log('[OK] substore-endpoint.js 空参默认不配置 & 动态传参注入 100% 验证通过！');
+console.log('[OK] substore-endpoint.js 空参默认不配置 & 动态传参（含 OpenWrt 子网路由）注入 100% 验证通过！');
 '@
 
 node -e $nodeTest

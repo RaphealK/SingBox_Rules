@@ -106,6 +106,12 @@ foreach ($cfg in $tsConfigs) {
             throw "$cfg 的 tun-in 缺失 route_exclude_address: 255.255.255.255/32 (防吞 DHCP 广播)"
         }
     }
+    if ($cfg -in @("openwrt.json", "linux.json", "android.json")) {
+        $dhcpRule = $json.route.rules[0]
+        if ($dhcpRule.network -ne "udp" -or -not ($dhcpRule.port -contains 67 -and $dhcpRule.port -contains 68) -or $dhcpRule.action -ne "bypass") {
+            throw "$cfg 顶层首条路由规则期望为 UDP 67/68 action: bypass (内核级 DHCP 直通)"
+        }
+    }
     if ($cfg -eq "openwrt.json") {
         $localDns = $json.dns.servers | Where-Object { $_.tag -eq "local" }
         if (-not ($localDns.neighbor_domain -contains "." -and $localDns.neighbor_domain -contains ".lan")) {

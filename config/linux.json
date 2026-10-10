@@ -114,6 +114,12 @@
   "route": {
     "rules": [
       {
+        "network": "udp",
+        "port": [67, 68],
+        "action": "bypass",
+        "outbound": "🎯 Direct"
+      },
+      {
         "type": "logical",
         "mode": "and",
         "rules": [

@@ -36,7 +36,8 @@ function parseArguments() {
   if (typeof $arguments === "object" && $arguments !== null) {
     args = { ...$arguments };
   } else if (typeof $arguments === "string") {
-    $arguments.split("&").forEach(pair => {
+    const cleanArgs = $arguments.split("#")[0];
+    cleanArgs.split("&").forEach(pair => {
       const idx = pair.indexOf("=");
       if (idx > 0) {
         const key = decodeURIComponent(pair.slice(0, idx));
@@ -307,7 +308,7 @@ function process() {
       }
       if (r.type === "logical" && Array.isArray(r.rules)) {
         r.rules.forEach(sub => {
-          if (Array.isArray(sub.preferred_by) && sub.invert === true) {
+          if (Array.isArray(sub.preferred_by) && sub.preferred_by.includes("tailscale-ep")) {
             sub.preferred_by = [tag];
           }
         });

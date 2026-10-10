@@ -4,7 +4,6 @@
     "servers": [
       {"tag": "local", "type": "local", "prefer_go": true},
       {"tag": "ali", "type": "h3", "server": "223.5.5.5"},
-      {"tag": "tx", "type": "https", "server": "doh.pub", "domain_resolver": "hosts"},
       {"tag": "google", "type": "https", "server": "8.8.8.8", "detour": "🌍 Proxy"},
       {
         "tag": "fakeip",
@@ -12,7 +11,6 @@
         "inet4_range": "198.19.0.0/16",
         "inet6_range": "fc00::/18"
       },
-      {"type": "hosts", "tag": "hosts", "predefined": {"doh.pub": ["1.12.12.21", "120.53.53.53"]}},
       {"tag": "ts-dns", "type": "tailscale", "endpoint": "tailscale-ep", "accept_search_domain": true}
     ],
     "rules": [
@@ -124,7 +122,8 @@
         "mode": "or",
         "rules": [
           {"domain_suffix": "push.apple.com"},
-          {"rule_set": "geoip-telegram"}
+          {"rule_set": "geoip-telegram"},
+          {"preferred_by": ["tailscale-ep"]}
         ],
         "invert": true,
         "action": "sniff",

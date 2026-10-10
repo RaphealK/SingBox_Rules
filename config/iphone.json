@@ -4,14 +4,12 @@
     "servers": [
       {"tag": "local", "type": "local"},
       {"tag": "ali", "type": "h3", "server": "223.5.5.5"},
-      {"tag": "tx", "type": "https", "server": "doh.pub", "domain_resolver": "hosts"},
       {"tag": "google", "type": "https", "server": "8.8.8.8", "detour": "🌍 Proxy"},
       {
         "tag": "fakeip",
         "type": "fakeip",
         "inet4_range": "198.18.0.0/16"
       },
-      {"type": "hosts", "tag": "hosts", "predefined": {"doh.pub": ["1.12.12.21", "120.53.53.53"]}},
       {"tag": "ts-dns", "type": "tailscale", "endpoint": "tailscale-ep", "accept_search_domain": true}
     ],
     "rules": [
@@ -39,7 +37,7 @@
         "type": "logical",
         "mode": "and",
         "rules": [
-          {"query_type": ["A", "AAAA"]},
+          {"query_type": "A"},
           {"rule_set": "geosite-geolocation-!cn", "invert": true}
         ],
         "action": "evaluate",
@@ -48,7 +46,7 @@
         "timeout": "2s"
       },
       {"match_response": true, "rule_set": "geoip-cn", "server": "ali"},
-      {"query_type": ["A", "AAAA"], "server": "fakeip", "rewrite_ttl": 1}
+      {"query_type": "A", "server": "fakeip", "rewrite_ttl": 1}
     ],
     "final": "google",
     "strategy": "ipv4_only",
@@ -104,7 +102,8 @@
         "mode": "or",
         "rules": [
           {"domain_suffix": "push.apple.com"},
-          {"rule_set": "geoip-telegram"}
+          {"rule_set": "geoip-telegram"},
+          {"preferred_by": ["tailscale-ep"]}
         ],
         "invert": true,
         "action": "sniff",
@@ -121,6 +120,12 @@
         "action": "hijack-dns"
       },
       {
+        "preferred_by": [
+          "tailscale-ep"
+        ],
+        "outbound": "tailscale-ep"
+      },
+      {
         "wifi_ssid": [
           "KsRouter",
           "KsRouter-5G"
@@ -131,12 +136,6 @@
         "ip_version": 6,
         "action": "reject",
         "no_drop": true
-      },
-      {
-        "preferred_by": [
-          "tailscale-ep"
-        ],
-        "outbound": "tailscale-ep"
       },
       {
         "ip_is_private": true,

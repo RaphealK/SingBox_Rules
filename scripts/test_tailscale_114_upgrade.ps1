@@ -53,20 +53,31 @@ foreach ($cfg in $tsConfigs) {
         }
     }
 
-    # 2. 验证 MagicDNS
+    # 2. 验证 MagicDNS 与已清理冗余 tx / hosts DNS 服务器
     $tsDns = $json.dns.servers | Where-Object { $_.tag -eq "ts-dns" }
     if ($null -eq $tsDns -or $tsDns.type -ne "tailscale" -or $tsDns.accept_search_domain -ne $true) {
         throw "$cfg 的 ts-dns 配置不正确"
+    }
+    foreach ($deadDns in @("tx", "hosts")) {
+        $foundDead = $json.dns.servers | Where-Object { $_.tag -eq $deadDns }
+        if ($null -ne $foundDead) {
+            throw "$cfg 的 dns.servers 仍存在未使用的冗余服务器: $deadDns"
+        }
     }
     $tsDnsRule = $json.dns.rules | Where-Object { $_.preferred_by -eq "ts-dns" -and $_.server -eq "ts-dns" }
     if ($null -eq $tsDnsRule) {
         throw "$cfg 的 dns.rules 缺失 preferred_by: ts-dns 规则"
     }
 
-    # 3. 验证已移除重复冗余的 Tailscale 路由规则，仅保留 preferred_by 动态路由
+    # 3. 验证已移除重复冗余的 Tailscale 路由规则，仅保留 preferred_by 动态路由，且 sniff 排除了 tailscale-ep
     $prefRoute = $json.route.rules | Where-Object { $_.preferred_by -contains "tailscale-ep" -and $_.outbound -eq "tailscale-ep" }
     if ($null -eq $prefRoute) {
         throw "$cfg 缺失 preferred_by: [tailscale-ep] 路由规则"
+    }
+    $sniffRule = $json.route.rules | Where-Object { $_.action -eq "sniff" }
+    $sniffExcludesTs = $sniffRule.rules | Where-Object { $_.preferred_by -contains "tailscale-ep" }
+    if ($null -eq $sniffExcludesTs) {
+        throw "$cfg 的 sniff 规则未排除 preferred_by: [tailscale-ep]"
     }
     $dupCidrRoute = $json.route.rules | Where-Object { $_.ip_cidr -contains "100.64.0.0/10" }
     if ($null -ne $dupCidrRoute) {
@@ -96,9 +107,9 @@ if (epEmpty.accept_routes !== true) {
   throw new Error('默认 accept_routes 应为 true');
 }
 
-// 测试 2: 开启广播内网地址 (advertise_routes)、开启接收地址 (accept_routes=true)、开启作为 Peer Relay 节点 (peer_relay=true)
+// 测试 2: 开启广播内网地址 (advertise_routes)、开启接收地址 (accept_routes=true)、开启作为 Peer Relay 节点 (peer_relay=true)，且带 #noCache 尾缀
 global.$content = raw;
-global.$arguments = 'control_url=https://mesh.luokinging.com&advertise_routes=192.168.31.0/24&accept_routes=true&peer_relay=true&relay_endpoints=8.134.36.157:40000&tags=tag:luoking,tag:luoking-share,tag:relay,tag:rephael&auth_key=tskey-test';
+global.$arguments = 'control_url=https://mesh.luokinging.com&advertise_routes=192.168.31.0/24&accept_routes=true&peer_relay=true&relay_endpoints=8.134.36.157:40000&tags=tag:luoking,tag:luoking-share,tag:relay,tag:rephael&auth_key=tskey-test#noCache';
 delete require.cache[require.resolve('./scripts/substore-endpoint.js')];
 require('./scripts/substore-endpoint.js');
 const resFull = JSON.parse(global.$content);
@@ -106,7 +117,7 @@ const epFull = resFull.endpoints[0];
 
 if (epFull.control_url !== 'https://mesh.luokinging.com') throw new Error('control_url 注入失败');
 if (epFull.hostname !== undefined) throw new Error('未传 hostname 时应保持 undefined 由设备自动获取');
-if (epFull.auth_key !== 'tskey-test') throw new Error('auth_key 注入失败');
+if (epFull.auth_key !== 'tskey-test') throw new Error('auth_key 注入失败或未剥离 #noCache: ' + epFull.auth_key);
 if (epFull.accept_routes !== true) throw new Error('accept_routes=true 注入失败');
 if (epFull.relay_server_port !== 40000) throw new Error('peer_relay=true 自动端口 40000 注入失败');
 if (JSON.stringify(epFull.relay_server_static_endpoints) !== JSON.stringify(['8.134.36.157:40000'])) {
@@ -135,7 +146,7 @@ if (epOff.relay_server_port !== undefined || epOff.relay_server_static_endpoints
   throw new Error('peer_relay=false 未清理 relay_server_port / relay_server_static_endpoints');
 }
 
-console.log('[OK] substore-endpoint.js 广播内网地址、接收地址、Peer Relay 节点动态开关 100% 验证通过！');
+console.log('[OK] substore-endpoint.js 广播内网地址、接收地址、Peer Relay 节点动态开关与 #noCache 过滤 100% 验证通过！');
 '@
 
 node -e $nodeTest

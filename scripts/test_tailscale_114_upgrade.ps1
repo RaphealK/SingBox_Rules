@@ -102,6 +102,9 @@ foreach ($cfg in $tsConfigs) {
         if ($tunIn.exclude_mptcp -ne $true) {
             throw "$cfg 的 tun-in.exclude_mptcp 期望为 true"
         }
+        if (-not ($tunIn.route_exclude_address -contains "255.255.255.255/32")) {
+            throw "$cfg 的 tun-in 缺失 route_exclude_address: 255.255.255.255/32 (防吞 DHCP 广播)"
+        }
     }
     if ($cfg -eq "openwrt.json") {
         $localDns = $json.dns.servers | Where-Object { $_.tag -eq "local" }

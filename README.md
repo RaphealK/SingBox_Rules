@@ -139,3 +139,30 @@ https://gh-proxy.com/https://raw.githubusercontent.com/RaphealK/SingBox_Rules/ma
   - `exit_node`: 指定使用的出口节点名称或 IP
   - `tag`: Endpoint 标签名（默认 `tailscale-ep`）
 
+---
+
+## 6. Linux / Ubuntu 自动化更新与零中断运维指南
+
+针对 Ubuntu / Debian 等 Linux 设备，仓库提供了工业级自动化更新脚本 [`scripts/update-singbox.sh`](file:///d:/Git/SingBox_Rules/scripts/update-singbox.sh)，具备：
+1. **防格式混淆**：自带 `User-Agent: sing-box` 请求头，防止 Sub-Store 下发错误的 Clash YAML 格式；
+2. **代理双模回退**：直连拉取失败时自动尝试通过本地混合端口（`127.0.0.1:7890`）代理拉取；
+3. **严格语法预检**：更新覆盖前自动运行 `sing-box check`，非法配置拒绝覆盖；
+4. **零中断平滑热重载**：使用 `SIGHUP` 信号热加载新配置，长连接无感保持；
+5. **故障自愈回滚**：若重载后服务异常，秒级自动还原上一次备份。
+
+### 部署与使用
+在 Linux 设备上直接下载部署：
+```bash
+sudo curl -fsSL "https://gh-proxy.com/https://raw.githubusercontent.com/RaphealK/SingBox_Rules/main/scripts/update-singbox.sh" -o /usr/local/bin/update-singbox.sh
+sudo chmod +x /usr/local/bin/update-singbox.sh
+
+# 首次绑定订阅 URL 并立即更新
+sudo update-singbox.sh -u "你的SubStore链接或GitHub链接#noCache"
+
+# 日常更新只需一行
+sudo update-singbox.sh
+
+# 遇故障一键回滚
+sudo update-singbox.sh -r
+```
+

@@ -43,9 +43,9 @@ foreach ($cfg in $tsConfigs) {
         throw "$cfg 的 tailscale-ep 基础属性 (accept_routes / listen_port) 不正确"
     }
 
-    if ($cfg -eq "iphone.json") {
+    if ($cfg -in @("iphone.json", "android.json")) {
         if ($null -ne $ep.PSObject.Properties["ssh_server"]) {
-            throw "iphone.json 不应包含 ssh_server"
+            throw "$cfg 为移动端设备，受沙盒与终端限制不应包含 ssh_server"
         }
     } else {
         if ($ep.ssh_server -ne $true) {

@@ -319,8 +319,7 @@
       "type": "tailscale",
       "tag": "tailscale-ep",
       "accept_routes": true,
-      "listen_port": 41641,
-      "ssh_server": true
+      "listen_port": 41641
     }
   ],
   "experimental": {

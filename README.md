@@ -107,13 +107,13 @@ https://gh-proxy.com/https://raw.githubusercontent.com/xream/scripts/main/surge/
 - **零硬编码默认模板**：默认仅开启 `accept_routes: true`、`listen_port: 41641` 及平台对应的 `ssh_server: true`（`iphone.json` 因 iOS 沙盒限制不开启）。
 - **原生 MagicDNS (`ts-dns`)**：启用 `accept_search_domain: true` 与 `preferred_by: "ts-dns"`，支持单标签短主机名直连。
 - **动态子网路由 (`preferred_by`)**：移除硬编码的 `100.64.0.0/10` 等冗余规则，统一由 `preferred_by: ["tailscale-ep"]` 动态匹配 Tailscale 虚拟内网及所有远端子网路由；OpenWrt / Linux 同时支持异地设备入站访问局域网子网路由（自动用户态 SNAT 转发）。
-- **全动态传参注入**：支持按需注入 `control_url`、`hostname`、`auth_key`、`advertise_routes` 及 4 个 ACL 标签（`tag:luoking`、`tag:luoking-share`、`tag:relay`、`tag:rephael`）。
+- **全动态传参注入**：支持按需注入 `control_url`、`hostname`、`auth_key`、`advertise_routes` 及 ACL 标签（如 `tag:admin`、`tag:share`、`tag:relay`、`tag:user`）。
 
 ### 使用方法
 在 Sub-Store 的【订阅产物 (Artifact)】中，为对应 Sing-box 配置添加该脚本作为处理脚本，并通过 URL Hash 传递你的私有配置参数：
 
 ```text
-https://gh-proxy.com/https://raw.githubusercontent.com/RaphealK/SingBox_Rules/main/scripts/substore-endpoint.js#control_url=https://mesh.luokinging.com&auth_key=tskey-auth-xxxxxx&advertise_routes=192.168.31.0/24&tags=tag:luoking,tag:luoking-share,tag:relay,tag:rephael
+https://gh-proxy.com/https://raw.githubusercontent.com/RaphealK/SingBox_Rules/main/scripts/substore-endpoint.js#control_url=https://headscale.example.com&auth_key=tskey-auth-xxxxxx&advertise_routes=192.168.1.0/24&tags=tag:admin,tag:share,tag:relay,tag:user
 ```
 
 ### 脚本参数说明
@@ -121,14 +121,14 @@ https://gh-proxy.com/https://raw.githubusercontent.com/RaphealK/SingBox_Rules/ma
   - `control_url` / `url`: Headscale 控制面完整地址（传入后自动注入控制面域名直连 DNS 规则防 FakeIP 污染）
   - `auth_key` / `key`: Headscale 预授权 Key（不传则通过客户端或 Web 面板交互式登录）
   - `hostname`: 节点在控制面板显示的名称（不传则由 Sing-Box 1.14 自动使用系统主机名/设备名）
-  - `tags` / `advertise_tags`: 逗号分隔的 ACL 标签列表，如 `tag:luoking,tag:luoking-share,tag:relay,tag:rephael`（不传则作为个人设备，支持 Taildrop）
+  - `tags` / `advertise_tags`: 逗号分隔的 ACL 标签列表，如 `tag:admin,tag:share,tag:relay,tag:user`（不传则作为个人设备，支持 Taildrop）
 - **核心路由与中继控制**：
-  - **是否广播内网地址** (`advertise_routes` / `routes`): 逗号分隔的广播内网子网 CIDR（如 `advertise_routes=192.168.31.0/24`）；不传或传 `false` 则不广播内网地址。
+  - **是否广播内网地址** (`advertise_routes` / `routes`): 逗号分隔的广播内网子网 CIDR（如 `advertise_routes=192.168.1.0/24`）；不传或传 `false` 则不广播内网地址。
   - **是否接收地址** (`accept_routes` / `accept`): 是否接收其他节点广播的子网路由，传 `true` 或 `false`（默认 `true`）。
   - **是否作为 Peer Relay 节点** (`peer_relay` / `relay` / `relay_server_port`):
     - 传 `peer_relay=true`（或 `relay=true`）：启用 Peer Relay 并默认监听 `40000` 端口；
     - 传具体端口号如 `peer_relay=40000`（或 `relay_server_port=40000`）：启用并监听指定端口；
-    - 配合 `relay_endpoints` / `relay_server_static_endpoints`（如 `relay_endpoints=8.134.36.157:40000`）：指定静态公网中继地址；
+    - 配合 `relay_endpoints` / `relay_server_static_endpoints`（如 `relay_endpoints=198.51.100.1:40000`）：指定静态公网中继地址；
     - 不传或传 `false`：不作为 Peer Relay 节点。
 - **其他可选参数**：
   - `listen_port`: WireGuard P2P 监听 UDP 端口（默认 `41641`）

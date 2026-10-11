@@ -150,28 +150,28 @@ if (epEmpty.accept_routes !== true) {
 
 // 测试 2: 开启广播内网地址 (advertise_routes)、开启接收地址 (accept_routes=true)、开启作为 Peer Relay 节点 (peer_relay=true)，且带 #noCache 尾缀
 global.$content = raw;
-global.$arguments = 'control_url=https://mesh.luokinging.com&advertise_routes=192.168.31.0/24&accept_routes=true&peer_relay=true&relay_endpoints=8.134.36.157:40000&tags=tag:luoking,tag:luoking-share,tag:relay,tag:rephael&auth_key=tskey-test#noCache';
+global.$arguments = 'control_url=https://headscale.example.com&advertise_routes=192.168.1.0/24&accept_routes=true&peer_relay=true&relay_endpoints=198.51.100.1:40000&tags=tag:admin,tag:share,tag:relay,tag:user&auth_key=tskey-test#noCache';
 delete require.cache[require.resolve('./scripts/substore-endpoint.js')];
 require('./scripts/substore-endpoint.js');
 const resFull = JSON.parse(global.$content);
 const epFull = resFull.endpoints[0];
 
-if (epFull.control_url !== 'https://mesh.luokinging.com') throw new Error('control_url 注入失败');
+if (epFull.control_url !== 'https://headscale.example.com') throw new Error('control_url 注入失败');
 if (epFull.hostname !== undefined) throw new Error('未传 hostname 时应保持 undefined 由设备自动获取');
 if (epFull.auth_key !== 'tskey-test') throw new Error('auth_key 注入失败或未剥离 #noCache: ' + epFull.auth_key);
 if (epFull.accept_routes !== true) throw new Error('accept_routes=true 注入失败');
 if (epFull.relay_server_port !== 40000) throw new Error('peer_relay=true 自动端口 40000 注入失败');
-if (JSON.stringify(epFull.relay_server_static_endpoints) !== JSON.stringify(['8.134.36.157:40000'])) {
+if (JSON.stringify(epFull.relay_server_static_endpoints) !== JSON.stringify(['198.51.100.1:40000'])) {
   throw new Error('relay_endpoints 注入失败');
 }
-if (JSON.stringify(epFull.advertise_routes) !== JSON.stringify(['192.168.31.0/24'])) {
+if (JSON.stringify(epFull.advertise_routes) !== JSON.stringify(['192.168.1.0/24'])) {
   throw new Error('advertise_routes 注入不匹配: ' + JSON.stringify(epFull.advertise_routes));
 }
-const expected = ['tag:luoking', 'tag:luoking-share', 'tag:relay', 'tag:rephael'];
+const expected = ['tag:admin', 'tag:share', 'tag:relay', 'tag:user'];
 if (JSON.stringify(epFull.advertise_tags) !== JSON.stringify(expected)) {
   throw new Error('advertise_tags 注入不匹配: ' + JSON.stringify(epFull.advertise_tags));
 }
-const hasControlDns = resFull.dns.rules.some(r => Array.isArray(r.domain) && r.domain.includes('mesh.luokinging.com') && r.server === 'ali');
+const hasControlDns = resFull.dns.rules.some(r => Array.isArray(r.domain) && r.domain.includes('headscale.example.com') && r.server === 'ali');
 if (!hasControlDns) throw new Error('control_url 域名未自动注入直连 DNS 规则');
 
 // 测试 3: 显式关闭接收地址 (accept_routes=false)、不广播内网地址 (advertise_routes=false)、不作为 Peer Relay (peer_relay=false)

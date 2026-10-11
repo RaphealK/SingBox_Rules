@@ -7,19 +7,19 @@
  * 3. 自动同步 MagicDNS (dns.servers[ts-dns])、控制面直连 DNS 解析与 preferred_by 动态子网路由
  * 
  * 示例 URL 调用参数：
- * https://gh-proxy.com/https://raw.githubusercontent.com/RaphealK/SingBox_Rules/main/scripts/substore-endpoint.js#control_url=https://mesh.luokinging.com&auth_key=tskey-auth-xxxxxx&hostname=windows-singbox&tags=tag:luoking,tag:luoking-share,tag:relay,tag:rephael
+ * https://gh-proxy.com/https://raw.githubusercontent.com/RaphealK/SingBox_Rules/main/scripts/substore-endpoint.js#control_url=https://headscale.example.com&auth_key=tskey-auth-xxxxxx&hostname=windows-singbox&tags=tag:admin,tag:share,tag:relay,tag:user
  * 
  * 支持的动态参数：
  * - control_url / url: Headscale 协调服务器完整地址（传入后自动注入控制面域名直连 DNS 规则）
  * - hostname: 节点名称（不传则由 Sing-Box 1.14 自动使用系统主机名/设备名）
  * - tags / advertise_tags: 逗号分隔的 ACL 标签列表，支持：
- *     tag:luoking, tag:luoking-share, tag:relay, tag:rephael（可省略 tag: 前缀）
+ *     tag:admin, tag:share, tag:relay, tag:user（可省略 tag: 前缀）
  * - auth_key / key: 预授权密钥（不传则通过客户端或 Web 面板交互式登录）
- * - advertise_routes / routes: 逗号分隔的广播内网子网路由 CIDR（如 192.168.31.0/24；不传或传 false 则不广播）
+ * - advertise_routes / routes: 逗号分隔的广播内网子网路由 CIDR（如 192.168.1.0/24；不传或传 false 则不广播）
  * - accept_routes: 是否接收其他节点广播的子网路由，true 或 false（默认：true）
  * - peer_relay / relay / relay_server_port: 是否作为 Peer Relay 对等中继节点：
  *     传 true 默认监听 40000 端口；传具体数字（如 40000）则监听该端口；不传或传 false 则不作为 Peer Relay 节点
- * - relay_endpoints / relay_server_static_endpoints: 逗号分隔的 Peer Relay 静态公网端点（如 8.134.36.157:40000）
+ * - relay_endpoints / relay_server_static_endpoints: 逗号分隔的 Peer Relay 静态公网端点（如 198.51.100.1:40000）
  * - listen_port: WireGuard P2P 监听 UDP 端口（默认：41641）
  * - ssh_server: 是否启用内置 Tailscale SSH/SFTP 服务端，true 或 false
  * - taildrop_directory / taildrop: Taildrop 隔空传文件保存目录

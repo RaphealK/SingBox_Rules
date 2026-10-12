@@ -31,20 +31,37 @@
  * - tag: Endpoint 标签名称（默认：tailscale-ep）
  */
 
+function safeDecode(str) {
+  try {
+    return decodeURIComponent(str);
+  } catch (e) {
+    return str;
+  }
+}
+
+function cleanValue(val) {
+  if (typeof val !== "string") return val;
+  return safeDecode(val.split("#")[0]).trim();
+}
+
 function parseArguments() {
   let args = {};
   if (typeof $arguments === "object" && $arguments !== null) {
-    args = { ...$arguments };
+    Object.keys($arguments).forEach(k => {
+      const cleanKey = safeDecode(k).trim();
+      const rawVal = $arguments[k];
+      args[cleanKey] = typeof rawVal === "string" ? cleanValue(rawVal) : rawVal;
+    });
   } else if (typeof $arguments === "string") {
     const cleanArgs = $arguments.split("#")[0];
     cleanArgs.split("&").forEach(pair => {
       const idx = pair.indexOf("=");
       if (idx > 0) {
-        const key = decodeURIComponent(pair.slice(0, idx));
-        const value = decodeURIComponent(pair.slice(idx + 1) || "");
+        const key = safeDecode(pair.slice(0, idx)).trim();
+        const value = cleanValue(pair.slice(idx + 1) || "");
         args[key] = value;
       } else if (pair) {
-        args[decodeURIComponent(pair)] = "";
+        args[safeDecode(pair).trim()] = "";
       }
     });
   }
@@ -53,20 +70,141 @@ function parseArguments() {
 
 function parseList(val) {
   if (!val) return [];
-  if (Array.isArray(val)) return val;
-  return String(val)
+  if (Array.isArray(val)) return val.map(v => cleanValue(String(v))).filter(Boolean);
+  return cleanValue(String(val))
     .split(",")
-    .map(s => s.trim())
+    .map(s => cleanValue(s))
     .filter(Boolean);
 }
 
 function parseBool(val, defaultVal) {
   if (val === undefined || val === "") return defaultVal;
   if (typeof val === "boolean") return val;
-  const s = String(val).trim().toLowerCase();
+  const s = cleanValue(String(val)).toLowerCase();
   if (s === "true" || s === "1" || s === "yes") return true;
   if (s === "false" || s === "0" || s === "no") return false;
   return defaultVal;
+}
+
+function isValidIPv4(ip) {
+  const parts = ip.split(".");
+  if (parts.length !== 4) return false;
+  return parts.every(p => {
+    if (!/^\d{1,3}$/.test(p)) return false;
+    const n = Number(p);
+    return n >= 0 && n <= 255;
+  });
+}
+
+function isValidIPv6(ip) {
+  if (!ip.includes(":")) return false;
+  return /^[0-9a-fA-F:]+$/.test(ip);
+}
+
+function extractFirstPort(rawList) {
+  for (const item of rawList) {
+    const s = cleanValue(String(item)).replace(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//, "").split("/")[0];
+    const m = s.match(/:(\d+)$/);
+    if (m) {
+      const p = parseInt(m[1], 10);
+      if (p > 0 && p <= 65535) return p;
+    }
+  }
+  return 0;
+}
+
+/**
+ * 规范化并校验 relay_server_static_endpoints（Sing-Box 要求严格为 []netip.AddrPort 即 ip:port 或 [ipv6]:port）
+ * 支持自动为纯 IP 补全端口、剥离误加的协议头、过滤布尔字面量与非法非 IP 项，彻底防止 `endpoints[0]: not an ip:port`
+ */
+function normalizeRelayEndpoints(rawList, fallbackPort) {
+  const port = fallbackPort > 0 && fallbackPort <= 65535 ? fallbackPort : 40000;
+  const result = [];
+  const ignoredTokens = new Set(["true", "false", "1", "0", "yes", "no", "none", "null", "undefined"]);
+
+  rawList.forEach(rawItem => {
+    let s = cleanValue(String(rawItem));
+    if (!s || ignoredTokens.has(s.toLowerCase())) return;
+
+    // 剥离可能误加的协议头 (如 http://, https://, udp://) 与路径尾缀
+    s = s.replace(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//, "").split("/")[0].trim();
+    if (!s || ignoredTokens.has(s.toLowerCase())) return;
+
+    // 1. 带方括号的 IPv6: [2001:db8::1]:40000 或 [2001:db8::1]
+    if (s.startsWith("[")) {
+      const closeIdx = s.indexOf("]");
+      if (closeIdx <= 1) return;
+      const ipv6 = s.slice(1, closeIdx);
+      if (!isValidIPv6(ipv6)) return;
+      const rest = s.slice(closeIdx + 1);
+      if (!rest || rest === ":") {
+        result.push(`[${ipv6}]:${port}`);
+      } else if (rest.startsWith(":")) {
+        const portStr = rest.slice(1);
+        const p = parseInt(portStr, 10);
+        if (p > 0 && p <= 65535 && String(p) === portStr) {
+          result.push(`[${ipv6}]:${p}`);
+        }
+      }
+      return;
+    }
+
+    // 2. 含多个冒号的裸 IPv6 地址（未加方括号，如 2001:db8::1）
+    const firstColon = s.indexOf(":");
+    const lastColon = s.lastIndexOf(":");
+    if (firstColon !== -1 && firstColon !== lastColon) {
+      if (isValidIPv6(s)) {
+        result.push(`[${s}]:${port}`);
+      }
+      return;
+    }
+
+    // 3. 含单个冒号: IPv4:port
+    if (firstColon !== -1) {
+      const host = s.slice(0, firstColon);
+      const portStr = s.slice(firstColon + 1);
+      const p = parseInt(portStr, 10);
+      if (isValidIPv4(host) && p > 0 && p <= 65535 && String(p) === portStr) {
+        result.push(`${host}:${p}`);
+      } else if (isValidIPv4(host) && !portStr) {
+        result.push(`${host}:${port}`);
+      }
+      return;
+    }
+
+    // 4. 不含冒号的纯 IPv4 地址: 自动补全 :port
+    if (isValidIPv4(s)) {
+      result.push(`${s}:${port}`);
+    }
+  });
+
+  return result;
+}
+
+/**
+ * 规范化并校验 advertise_routes（Sing-Box 要求为 []netip.Prefix CIDR 格式）
+ */
+function normalizeRoutes(rawList) {
+  const result = [];
+  const ignoredTokens = new Set(["true", "false", "1", "0", "yes", "no", "none", "null", "undefined"]);
+  rawList.forEach(rawItem => {
+    const s = cleanValue(String(rawItem));
+    if (!s || ignoredTokens.has(s.toLowerCase())) return;
+    if (s.includes("/")) {
+      const [ip, prefixStr] = s.split("/");
+      const prefix = parseInt(prefixStr, 10);
+      if (isValidIPv4(ip) && prefix >= 0 && prefix <= 32 && String(prefix) === prefixStr) {
+        result.push(`${ip}/${prefix}`);
+      } else if (isValidIPv6(ip) && prefix >= 0 && prefix <= 128 && String(prefix) === prefixStr) {
+        result.push(`${ip}/${prefix}`);
+      }
+    } else if (isValidIPv4(s)) {
+      result.push(`${s}/32`);
+    } else if (isValidIPv6(s)) {
+      result.push(`${s}/128`);
+    }
+  });
+  return result;
 }
 
 function normalizeTags(tagsInput) {
@@ -158,7 +296,7 @@ function process() {
   // 3.2 是否广播内网地址（advertise_routes / routes，不传或传 false 则不广播）
   const rawRoutes = args.advertise_routes !== undefined ? args.advertise_routes : args.routes;
   if (rawRoutes && rawRoutes !== "false" && rawRoutes !== "0") {
-    const routeList = parseList(rawRoutes);
+    const routeList = normalizeRoutes(parseList(rawRoutes));
     if (routeList.length > 0) {
       tsEndpoint.advertise_routes = routeList;
     } else {
@@ -179,35 +317,33 @@ function process() {
     args.relay_server_static_endpoints !== undefined
       ? args.relay_server_static_endpoints
       : args.relay_endpoints;
-  const relayEndpointsList =
+  const rawEndpointsList =
     rawRelayEndpoints && rawRelayEndpoints !== "false" && rawRelayEndpoints !== "0"
       ? parseList(rawRelayEndpoints)
       : [];
 
   if (rawRelay !== undefined && rawRelay !== "") {
-    const relayStr = String(rawRelay).trim().toLowerCase();
+    const relayStr = cleanValue(String(rawRelay)).toLowerCase();
     if (relayStr === "false" || relayStr === "0" || relayStr === "no") {
       delete tsEndpoint.relay_server_port;
       delete tsEndpoint.relay_server_static_endpoints;
     } else if (relayStr === "true" || relayStr === "yes") {
       // 若传 peer_relay=true，优先从静态端点提取端口，否则默认使用 40000
-      let inferredPort = 40000;
-      if (relayEndpointsList.length > 0) {
-        const m = relayEndpointsList[0].match(/:(\d+)$/);
-        if (m) inferredPort = parseInt(m[1], 10);
-      }
+      const inferredPort = extractFirstPort(rawEndpointsList) || 40000;
+      const validEndpoints = normalizeRelayEndpoints(rawEndpointsList, inferredPort);
       tsEndpoint.relay_server_port = inferredPort;
-      if (relayEndpointsList.length > 0) {
-        tsEndpoint.relay_server_static_endpoints = relayEndpointsList;
+      if (validEndpoints.length > 0) {
+        tsEndpoint.relay_server_static_endpoints = validEndpoints;
       } else {
         delete tsEndpoint.relay_server_static_endpoints;
       }
     } else {
       const parsedPort = parseInt(relayStr, 10);
-      if (!isNaN(parsedPort) && parsedPort > 0) {
+      if (!isNaN(parsedPort) && parsedPort > 0 && parsedPort <= 65535) {
+        const validEndpoints = normalizeRelayEndpoints(rawEndpointsList, parsedPort);
         tsEndpoint.relay_server_port = parsedPort;
-        if (relayEndpointsList.length > 0) {
-          tsEndpoint.relay_server_static_endpoints = relayEndpointsList;
+        if (validEndpoints.length > 0) {
+          tsEndpoint.relay_server_static_endpoints = validEndpoints;
         } else {
           delete tsEndpoint.relay_server_static_endpoints;
         }
@@ -216,11 +352,17 @@ function process() {
         delete tsEndpoint.relay_server_static_endpoints;
       }
     }
-  } else if (relayEndpointsList.length > 0) {
-    // 仅传了 relay_endpoints 时也自动开启 Peer Relay
-    const m = relayEndpointsList[0].match(/:(\d+)$/);
-    tsEndpoint.relay_server_port = m ? parseInt(m[1], 10) : 40000;
-    tsEndpoint.relay_server_static_endpoints = relayEndpointsList;
+  } else if (rawEndpointsList.length > 0) {
+    // 仅传了 relay_endpoints 时：必须校验出合法静态端点才开启 Peer Relay
+    const inferredPort = extractFirstPort(rawEndpointsList) || 40000;
+    const validEndpoints = normalizeRelayEndpoints(rawEndpointsList, inferredPort);
+    if (validEndpoints.length > 0) {
+      tsEndpoint.relay_server_port = inferredPort;
+      tsEndpoint.relay_server_static_endpoints = validEndpoints;
+    } else {
+      delete tsEndpoint.relay_server_port;
+      delete tsEndpoint.relay_server_static_endpoints;
+    }
   } else {
     delete tsEndpoint.relay_server_port;
     delete tsEndpoint.relay_server_static_endpoints;
@@ -228,7 +370,10 @@ function process() {
 
   // 3.4 其他可选参数
   if (args.listen_port !== undefined && args.listen_port !== "") {
-    tsEndpoint.listen_port = parseInt(args.listen_port, 10);
+    const lp = parseInt(cleanValue(String(args.listen_port)), 10);
+    if (!isNaN(lp) && lp > 0 && lp <= 65535) {
+      tsEndpoint.listen_port = lp;
+    }
   }
   if (args.state_directory) {
     tsEndpoint.state_directory = args.state_directory;

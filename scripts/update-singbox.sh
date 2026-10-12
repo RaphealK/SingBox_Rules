@@ -159,6 +159,10 @@ fi
 log_info "[2/4] 正在执行语法与规则集预检 (sing-box check)..."
 if ! sing-box check -c "${TEMP_FILE}"; then
     log_err "❌ 新配置语法或规则集校验失败！已拒绝应用，防止服务挂掉断网。"
+    if grep -q '"endpoints"' "${TEMP_FILE}" 2>/dev/null; then
+        log_warn "当前下载配置的 endpoints 节点内容如下，请检查参数格式（如 relay_endpoints 需为公网 IP 或 IP:端口）："
+        grep -A 15 '"endpoints"' "${TEMP_FILE}" || true
+    fi
     rm -f "${TEMP_FILE}"
     exit 1
 fi

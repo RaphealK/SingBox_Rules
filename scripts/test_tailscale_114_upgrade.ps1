@@ -187,7 +187,33 @@ if (epOff.relay_server_port !== undefined || epOff.relay_server_static_endpoints
   throw new Error('peer_relay=false 未清理 relay_server_port / relay_server_static_endpoints');
 }
 
-console.log('[OK] substore-endpoint.js 广播内网地址、接收地址、Peer Relay 节点动态开关与 #noCache 过滤 100% 验证通过！');
+// 测试 4: 防 "endpoints[0]: not an ip:port" 专项回归测试（纯 IP 自动补端口、Sub-Store Object 参数含 %3A/#noCache、协议头剥离、裸 IPv6 与误传布尔值过滤）
+global.$content = raw;
+global.$arguments = {
+  peer_relay: '50000',
+  relay_endpoints: '198.51.100.1,http://198.51.100.2%3A40000,2001:db8::1,true#noCache'
+};
+delete require.cache[require.resolve('./scripts/substore-endpoint.js')];
+require('./scripts/substore-endpoint.js');
+const resEdge = JSON.parse(global.$content);
+const epEdge = resEdge.endpoints[0];
+const expectedEdgeEndpoints = ['198.51.100.1:50000', '198.51.100.2:40000', '[2001:db8::1]:50000'];
+if (JSON.stringify(epEdge.relay_server_static_endpoints) !== JSON.stringify(expectedEdgeEndpoints)) {
+  throw new Error('边界端点规范化失败: ' + JSON.stringify(epEdge.relay_server_static_endpoints));
+}
+
+// 测试 5: 误传 relay_endpoints=true 时不应生成非法的 ["true"]
+global.$content = raw;
+global.$arguments = { peer_relay: 'true', relay_endpoints: 'true#noCache' };
+delete require.cache[require.resolve('./scripts/substore-endpoint.js')];
+require('./scripts/substore-endpoint.js');
+const resBoolEdge = JSON.parse(global.$content);
+const epBoolEdge = resBoolEdge.endpoints[0];
+if (epBoolEdge.relay_server_port !== 40000 || epBoolEdge.relay_server_static_endpoints !== undefined) {
+  throw new Error('误传 relay_endpoints=true 时未正确过滤非法静态端点');
+}
+
+console.log('[OK] substore-endpoint.js 广播内网地址、接收地址、Peer Relay 节点动态开关、防 not an ip:port 规范化与 #noCache 过滤 100% 验证通过！');
 '@
 
 node -e $nodeTest

@@ -96,21 +96,19 @@ foreach ($cfg in $tsConfigs) {
         throw "$cfg 的 ali+google 并行竞态 evaluate+respond 规则配置不完整"
     }
 
-    # 3.2 验证端侧专属 1.14 新特性
+    # 3.2 验证端侧专属 1.14 新特性与过度防御消除
     if ($cfg -in @("openwrt.json", "linux.json")) {
         $tunIn = $json.inbounds | Where-Object { $_.tag -eq "tun-in" }
         if ($tunIn.exclude_mptcp -ne $true) {
             throw "$cfg 的 tun-in.exclude_mptcp 期望为 true"
         }
-        if (-not ($tunIn.route_exclude_address -contains "255.255.255.255/32")) {
-            throw "$cfg 的 tun-in 缺失 route_exclude_address: 255.255.255.255/32 (防吞 DHCP 广播)"
+        if ($null -ne $tunIn.route_exclude_address) {
+            throw "$cfg 的 tun-in 包含冗余的 route_exclude_address (已消除过度防御)"
         }
     }
-    if ($cfg -in @("openwrt.json", "linux.json", "android.json")) {
-        $dhcpRule = $json.route.rules[0]
-        if ($dhcpRule.network -ne "udp" -or -not ($dhcpRule.port -contains 67 -and $dhcpRule.port -contains 68) -or $dhcpRule.action -ne "bypass") {
-            throw "$cfg 顶层首条路由规则期望为 UDP 67/68 action: bypass (内核级 DHCP 直通)"
-        }
+    $redundantDhcp = $json.route.rules | Where-Object { $_.network -eq "udp" -and ($_.port -contains 67 -or $_.port -contains 68) }
+    if ($null -ne $redundantDhcp) {
+        throw "$cfg 包含冗余的 UDP 67/68 DHCP 防御规则 (已精简)"
     }
     if ($cfg -eq "openwrt.json") {
         $localDns = $json.dns.servers | Where-Object { $_.tag -eq "local" }

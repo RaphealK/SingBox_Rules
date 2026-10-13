@@ -31,10 +31,9 @@
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **特殊出站 (`outbounds`)** | 额外包含 `🌉 Bridge` (bridge) | 无 | 无 | 无 | 无 |
 | **首条路由 (`route.rules[0]`)** | `preferred_by: ["🌉 Bridge"]` 走桥接（含内网/国内 IP） | `tun-in` 非全局下私有/非 Tailscale/国内 IP `bypass` | `tun-in` 非全局下私有/非 Tailscale/国内 IP `bypass` | 非全局下私有/非 Tailscale/国内 IP `bypass` | 无（直接从 sniff 开始） |
-| **TUN 入站** | `platform.http_proxy` (`127.0.0.1:7890`) | `auto_redirect: true`, `exclude_mptcp: true`, `route_exclude_address` (广播/多播) | `auto_redirect: true`, `exclude_mptcp: true`, `route_exclude_address` (广播/多播) | `auto_redirect: true`, `strict_route: true`, `platform.http_proxy` | `strict_route: true`, `platform.http_proxy` |
+| **TUN 入站** | `platform.http_proxy` (`127.0.0.1:7890`) | `auto_redirect: true`, `exclude_mptcp: true` | `auto_redirect: true`, `exclude_mptcp: true` | `auto_redirect: true`, `strict_route: true`, `platform.http_proxy` | `strict_route: true`, `platform.http_proxy` |
 | **HTTP 下载客户端 (`http_clients`)** | `detour: 🎯 Direct` | `detour: 🎯 Direct` | `detour: 🎯 Direct` | `detour: 🎯 Direct` | `engine: "apple"`, `detour: 🎯 Direct` |
 | **混合入站** | `0.0.0.0:7890` | `0.0.0.0:7890` | `0.0.0.0:7890` | `127.0.0.1:7890`（移动安全绑定） | `127.0.0.1:7890`（移动安全绑定） |
-| **DNS 独立入站 (`dns-in`)** | 无（TUN 网卡拦截） | 无（TUN 网卡拦截） | 监听 `127.0.0.1:5353`（接收 dnsmasq 53 端口上游转发） | 无（TUN 网卡拦截） | 无（TUN 网卡拦截） |
 | **API 服务 (`services[api]`)** | `0.0.0.0:9090`（纯 API，供自建统一面板连接） | `0.0.0.0:9090`（纯 API，供自建统一面板连接） | `0.0.0.0:7714`（纯 API，供自建统一面板连接） | 无（由安卓客户端 UI 接管） | 无（由 iOS 客户端接管） |
 | **缓存文件** | `store_fakeip: true`, `store_dns: true` | `path: /etc/sing-box/cache.db`, `store_fakeip: true`, `store_dns: true` | `path: /etc/sing-box/cache.db`, `store_fakeip: true`, `store_dns: true` | `store_fakeip: true` | `store_fakeip: true` |
 | **NTP 同步** | 启用 (`cn.pool.ntp.org`, 直连 `🎯 Direct`) | 启用 (`cn.pool.ntp.org`, 直连 `🎯 Direct`) | 无（由 OpenWrt 系统自带 `sysntpd` 接管） | 无 | 无 |
@@ -169,27 +168,21 @@ sudo update-singbox.sh -r
 
 ---
 
-## 7. OpenWrt 路由器 dnsmasq 与 Sing-Box 协同配置指南 (方案 A)
+## 7. OpenWrt 路由器原生 TUN 自动劫持与 dnsmasq 协同指南
 
-OpenWrt 端推荐采用社区标准成熟架构：**`dnsmasq` 监听 53 端口负责 DHCP 与局域网 `.lan` 主机名解析，公网上游转发至 Sing-Box 的 `127.0.0.1:5353` 独立入站**。
+OpenWrt 端配置采用最优雅、最纯粹的 **纯 TUN 原生透明代理架构**：无需在 Sing-Box 中配置任何特殊的 DNS 监听入站，也无需在 OpenWrt 中魔改 UCI 端口！
 
-### 核心收益
-- **保留局域网主机名发现**：路由器自身及各局域网设备仍能正常解析 `.lan` 及内网主机名；
-- **宿主机解析零故障**：宿主机 `/etc/resolv.conf`（`127.0.0.1:53`）完美生效，`sysntpd` 授时与 `opkg update` 无需任何额外设置；
-- **外网极速分流**：外网域名由 Sing-Box 提供阿里 H3 直连、并行竞态投机与 BlockAD 过滤。
+### 工作原理与设计优势
+- **dnsmasq 维持系统默认状态**：`dnsmasq` 正常监听 53 端口，专职负责局域网 DHCP IP 下发与 `.lan` 内网主机名解析；
+- **宿主机解析天然闭环**：路由器本地 `/etc/resolv.conf`（`127.0.0.1:53`）完美生效，`sysntpd` 自动授时与 `opkg update` 无需任何配置即可秒级响应；
+- **TUN 内核级自动劫持 (`auto_redirect`)**：当 `dnsmasq` 或客户端向公网 DNS 发起查询时，UDP 53 流量在经过网络层 OUTPUT / PREROUTING 链时，会被 Sing-Box 的 TUN 驱动无感捕获并自动触发 `{"port": 53, "action": "hijack-dns"}`，统一享受阿里 H3 极速解析、FakeIP 分流与 BlockAD 过滤；
+- **零额外端口，零规则跳转**：彻底移除冗余的 5353 监听与 route-options 规则，全端架构高度纯净统一。
 
-### OpenWrt 终端一键配置命令
-在 OpenWrt 终端执行以下 UCI 命令将 dnsmasq 上游绑定至 Sing-Box：
+### OpenWrt 部署检查
+只需确保 OpenWrt 自带的 `dnsmasq` 处于开启状态（监听 53 端口）即可自动形成闭环：
 ```bash
-# 确保 dnsmasq 监听 53 端口
+# 确认 dnsmasq 监听 53 端口并恢复原生状态
 uci set dhcp.@dnsmasq[0].port='53'
-
-# 禁用默认上游解析源，改向 Sing-Box 5353 端口
-uci set dhcp.@dnsmasq[0].noresolv='1'
-uci -q delete dhcp.@dnsmasq[0].server
-uci add_list dhcp.@dnsmasq[0].server='127.0.0.1#5353'
-
-# 提交并重启 dnsmasq
 uci commit dhcp
 /etc/init.d/dnsmasq restart
 ```

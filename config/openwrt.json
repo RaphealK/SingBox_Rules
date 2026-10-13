@@ -114,12 +114,6 @@
   "route": {
     "rules": [
       {
-        "network": "udp",
-        "port": [67, 68],
-        "action": "bypass",
-        "outbound": "🎯 Direct"
-      },
-      {
         "type": "logical",
         "mode": "and",
         "rules": [
@@ -153,16 +147,9 @@
         "timeout": "100ms"
       },
       {
-        "inbound": "dns-in",
-        "action": "route-options",
-        "override_address": "8.8.8.8",
-        "override_port": 53
-      },
-      {
         "type": "logical",
         "mode": "or",
         "rules": [
-          {"inbound": "dns-in"},
           {"port": 53},
           {"protocol": "dns"}
         ],
@@ -286,23 +273,13 @@
       ],
       "auto_route": true,
       "auto_redirect": true,
-      "exclude_mptcp": true,
-      "route_exclude_address": [
-        "255.255.255.255/32",
-        "224.0.0.0/4"
-      ]
+      "exclude_mptcp": true
     },
     {
       "tag": "mixed-in",
       "type": "mixed",
       "listen": "0.0.0.0",
       "listen_port": 7890
-    },
-    {
-      "tag": "dns-in",
-      "type": "direct",
-      "listen": "127.0.0.1",
-      "listen_port": 5353
     }
   ],
   "endpoints": [

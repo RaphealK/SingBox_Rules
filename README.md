@@ -34,9 +34,10 @@
 | **TUN 入站** | `platform.http_proxy` (`127.0.0.1:7890`) | `auto_redirect: true`, `exclude_mptcp: true`, `route_exclude_address` (广播/多播) | `auto_redirect: true`, `exclude_mptcp: true`, `route_exclude_address` (广播/多播) | `auto_redirect: true`, `strict_route: true`, `platform.http_proxy` | `strict_route: true`, `platform.http_proxy` |
 | **HTTP 下载客户端 (`http_clients`)** | `detour: 🎯 Direct` | `detour: 🎯 Direct` | `detour: 🎯 Direct` | `detour: 🎯 Direct` | `engine: "apple"`, `detour: 🎯 Direct` |
 | **混合入站** | `0.0.0.0:7890` | `0.0.0.0:7890` | `0.0.0.0:7890` | `127.0.0.1:7890`（移动安全绑定） | `127.0.0.1:7890`（移动安全绑定） |
+| **DNS 独立入站 (`dns-in`)** | 无（TUN 网卡拦截） | 无（TUN 网卡拦截） | 监听 `127.0.0.1:5353`（接收 dnsmasq 53 端口上游转发） | 无（TUN 网卡拦截） | 无（TUN 网卡拦截） |
 | **API 服务 (`services[api]`)** | `0.0.0.0:9090`（纯 API，供自建统一面板连接） | `0.0.0.0:9090`（纯 API，供自建统一面板连接） | `0.0.0.0:7714`（纯 API，供自建统一面板连接） | 无（由安卓客户端 UI 接管） | 无（由 iOS 客户端接管） |
 | **缓存文件** | `store_fakeip: true`, `store_dns: true` | `path: /etc/sing-box/cache.db`, `store_fakeip: true`, `store_dns: true` | `path: /etc/sing-box/cache.db`, `store_fakeip: true`, `store_dns: true` | `store_fakeip: true` | `store_fakeip: true` |
-| **NTP 同步** | 启用 (`cn.pool.ntp.org`, 直连 `🎯 Direct`) | 启用 (`cn.pool.ntp.org`, 直连 `🎯 Direct`) | 启用 (`cn.pool.ntp.org`, 直连 `🎯 Direct`) | 无 | 无 |
+| **NTP 同步** | 启用 (`cn.pool.ntp.org`, 直连 `🎯 Direct`) | 启用 (`cn.pool.ntp.org`, 直连 `🎯 Direct`) | 无（由 OpenWrt 系统自带 `sysntpd` 接管） | 无 | 无 |
 | **Headscale / Tailscale** | ✅ 原生端点 (`tailscale-ep`) | ✅ 原生端点 (`tailscale-ep`) | ✅ 原生端点 (`tailscale-ep`) | ✅ 原生端点 (`tailscale-ep`) | ✅ 原生端点 (`tailscale-ep`) |
 | **应用包名分流 (`package_name`)** | 无 | 无 | 无 | ✅ 微信/支付宝/网银/高德 App 强制直连防风控 | 无（iOS 系统沙盒限制） |
 | **策略组命名风格** | **统一 Emoji + 英文**（支持各业务组独立选节点） | **统一 Emoji + 英文**（支持各业务组独立选节点） | **统一 Emoji + 英文**（支持各业务组独立选节点） | **统一 Emoji + 英文**（支持各业务组独立选节点） | **统一 Emoji + 英文**（支持各业务组独立选节点） |
@@ -166,3 +167,29 @@ sudo update-singbox.sh
 sudo update-singbox.sh -r
 ```
 
+---
+
+## 7. OpenWrt 路由器 dnsmasq 与 Sing-Box 协同配置指南 (方案 A)
+
+OpenWrt 端推荐采用社区标准成熟架构：**`dnsmasq` 监听 53 端口负责 DHCP 与局域网 `.lan` 主机名解析，公网上游转发至 Sing-Box 的 `127.0.0.1:5353` 独立入站**。
+
+### 核心收益
+- **保留局域网主机名发现**：路由器自身及各局域网设备仍能正常解析 `.lan` 及内网主机名；
+- **宿主机解析零故障**：宿主机 `/etc/resolv.conf`（`127.0.0.1:53`）完美生效，`sysntpd` 授时与 `opkg update` 无需任何额外设置；
+- **外网极速分流**：外网域名由 Sing-Box 提供阿里 H3 直连、并行竞态投机与 BlockAD 过滤。
+
+### OpenWrt 终端一键配置命令
+在 OpenWrt 终端执行以下 UCI 命令将 dnsmasq 上游绑定至 Sing-Box：
+```bash
+# 确保 dnsmasq 监听 53 端口
+uci set dhcp.@dnsmasq[0].port='53'
+
+# 禁用默认上游解析源，改向 Sing-Box 5353 端口
+uci set dhcp.@dnsmasq[0].noresolv='1'
+uci -q delete dhcp.@dnsmasq[0].server
+uci add_list dhcp.@dnsmasq[0].server='127.0.0.1#5353'
+
+# 提交并重启 dnsmasq
+uci commit dhcp
+/etc/init.d/dnsmasq restart
+```

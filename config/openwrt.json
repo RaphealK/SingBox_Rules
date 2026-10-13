@@ -156,6 +156,7 @@
         "type": "logical",
         "mode": "or",
         "rules": [
+          {"inbound": "dns-in"},
           {"port": 53},
           {"protocol": "dns"}
         ],
@@ -290,6 +291,14 @@
       "type": "mixed",
       "listen": "0.0.0.0",
       "listen_port": 7890
+    },
+    {
+      "tag": "dns-in",
+      "type": "direct",
+      "listen": "127.0.0.1",
+      "listen_port": 5353,
+      "override_address": "8.8.8.8",
+      "override_port": 53
     }
   ],
   "endpoints": [
@@ -322,11 +331,6 @@
   },
   "certificate": {
     "store": "chrome"
-  },
-  "ntp": {
-    "enabled": true,
-    "server": "cn.pool.ntp.org",
-    "detour": "🎯 Direct"
   },
   "log": {
     "disabled": false,

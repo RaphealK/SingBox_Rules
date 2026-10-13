@@ -116,8 +116,17 @@ if ($dnsIn.listen_port -ne 5353) {
 if ($dnsIn.listen -ne "127.0.0.1") {
     throw "openwrt.json 的 dns-in listen 期望为 127.0.0.1，实际为 $($dnsIn.listen)"
 }
-if ($dnsIn.override_address -ne "8.8.8.8" -or $dnsIn.override_port -ne 53) {
-    throw "openwrt.json 的 dns-in 期望包含 override_address: 8.8.8.8 与 override_port: 53"
+if ($null -ne $dnsIn.override_address -or $null -ne $dnsIn.override_port) {
+    throw "openwrt.json 的 dns-in 入站仍包含已废弃的 override_address 或 override_port 字段，需迁移至 route-options"
+}
+
+# 验证 route.rules 中包含对 dns-in 入站的 route-options 目标改写 (官方迁移规范)
+$routeOptionsRule = $openwrtJson.route.rules | Where-Object { $_.action -eq "route-options" -and $_.inbound -eq "dns-in" }
+if ($null -eq $routeOptionsRule) {
+    throw "openwrt.json 未找到 action: route-options 且 inbound: dns-in 的路由重写规则"
+}
+if ($routeOptionsRule.override_address -ne "8.8.8.8" -or $routeOptionsRule.override_port -ne 53) {
+    throw "openwrt.json 的 route-options 规则期望包含 override_address: 8.8.8.8 与 override_port: 53"
 }
 
 # 验证 route.rules 中包含对 dns-in 入站的 hijack-dns 拦截
@@ -135,6 +144,6 @@ foreach ($subRule in $hijackRule.rules) {
 if (-not $ruleMatchesDnsIn) {
     throw "openwrt.json 的 hijack-dns 规则子项未包含 inbound: dns-in"
 }
-Write-Host "[OK] openwrt.json 成功配置 127.0.0.1:5353 dns-in 与 hijack-dns 路由劫持闭环 (方案 A)" -ForegroundColor Green
+Write-Host "[OK] openwrt.json 成功迁移 override 字段至 route-options 规则，入站无废弃字段 (方案 A)" -ForegroundColor Green
 
 Write-Host "================ NTP 与 DNS 配置全部验证通过 ================" -ForegroundColor Cyan

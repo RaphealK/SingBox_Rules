@@ -36,7 +36,7 @@
 | **混合入站** | `0.0.0.0:7890` | `0.0.0.0:7890` | `0.0.0.0:7890` | `127.0.0.1:7890`（移动安全绑定） | `127.0.0.1:7890`（移动安全绑定） |
 | **API 服务 (`services[api]`)** | `0.0.0.0:9090`（纯 API，供自建统一面板连接） | `0.0.0.0:9090`（纯 API，供自建统一面板连接） | `0.0.0.0:7714`（纯 API，供自建统一面板连接） | 无（由安卓客户端 UI 接管） | 无（由 iOS 客户端接管） |
 | **缓存文件** | `store_fakeip: true`, `store_dns: true` | `path: /etc/sing-box/cache.db`, `store_fakeip: true`, `store_dns: true` | `path: /etc/sing-box/cache.db`, `store_fakeip: true`, `store_dns: true` | `store_fakeip: true` | `store_fakeip: true` |
-| **NTP 同步** | 启用 (`time.apple.com`) | 启用 (`time.apple.com`) | 启用 (`time.apple.com`) | 无 | 无 |
+| **NTP 同步** | 启用 (`cn.pool.ntp.org`, 直连 `🎯 Direct`) | 启用 (`cn.pool.ntp.org`, 直连 `🎯 Direct`) | 启用 (`cn.pool.ntp.org`, 直连 `🎯 Direct`) | 无 | 无 |
 | **Headscale / Tailscale** | ✅ 原生端点 (`tailscale-ep`) | ✅ 原生端点 (`tailscale-ep`) | ✅ 原生端点 (`tailscale-ep`) | ✅ 原生端点 (`tailscale-ep`) | ✅ 原生端点 (`tailscale-ep`) |
 | **应用包名分流 (`package_name`)** | 无 | 无 | 无 | ✅ 微信/支付宝/网银/高德 App 强制直连防风控 | 无（iOS 系统沙盒限制） |
 | **策略组命名风格** | **统一 Emoji + 英文**（支持各业务组独立选节点） | **统一 Emoji + 英文**（支持各业务组独立选节点） | **统一 Emoji + 英文**（支持各业务组独立选节点） | **统一 Emoji + 英文**（支持各业务组独立选节点） | **统一 Emoji + 英文**（支持各业务组独立选节点） |

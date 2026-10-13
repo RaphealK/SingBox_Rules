@@ -317,7 +317,8 @@
   },
   "ntp": {
     "enabled": true,
-    "server": "time.apple.com"
+    "server": "cn.pool.ntp.org",
+    "detour": "🎯 Direct"
   },
   "log": {
     "disabled": false,

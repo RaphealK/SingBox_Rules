@@ -445,13 +445,11 @@ function process() {
 
   // 5. 自动同步路由规则 (route.rules)
   if (config.route && Array.isArray(config.route.rules)) {
-    // 同步首条逻辑规则中的 preferred_by 排除项与双保险子网路由规则
+    // 同步首条逻辑规则中的 preferred_by 排除项与动态子网路由规则
     config.route.rules.forEach(r => {
-      if (r.outbound === "tailscale-ep") {
-        r.outbound = tag;
-      }
-      if (Array.isArray(r.preferred_by) && r.preferred_by.includes("tailscale-ep")) {
+      if (Array.isArray(r.preferred_by) && r.outbound === "tailscale-ep") {
         r.preferred_by = [tag];
+        r.outbound = tag;
       }
       if (r.type === "logical" && Array.isArray(r.rules)) {
         r.rules.forEach(sub => {

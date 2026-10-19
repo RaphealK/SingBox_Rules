@@ -119,8 +119,7 @@
         "rules": [
           {"domain_suffix": "push.apple.com"},
           {"rule_set": "geoip-telegram"},
-          {"preferred_by": ["tailscale-ep"]},
-          {"ip_cidr": ["100.64.0.0/10", "fd7a:115c:a1e0::/48"]}
+          {"preferred_by": ["tailscale-ep"]}
         ],
         "invert": true,
         "action": "sniff",
@@ -137,11 +136,8 @@
         "action": "hijack-dns"
       },
       {
-        "type": "logical",
-        "mode": "or",
-        "rules": [
-          {"preferred_by": ["tailscale-ep"]},
-          {"ip_cidr": ["100.64.0.0/10", "fd7a:115c:a1e0::/48"]}
+        "preferred_by": [
+          "tailscale-ep"
         ],
         "outbound": "tailscale-ep"
       },

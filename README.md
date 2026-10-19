@@ -106,7 +106,7 @@ https://gh-proxy.com/https://raw.githubusercontent.com/xream/scripts/main/surge/
 ### 五端内置 1.14 精简架构与能力概览
 - **零硬编码默认模板**：默认仅开启 `accept_routes: true`、`listen_port: 41641` 及平台对应的 `ssh_server: true`（`iphone.json` 因 iOS 沙盒限制不开启）。
 - **原生 MagicDNS (`ts-dns`)**：启用 `accept_search_domain: true` 与 `preferred_by: "ts-dns"`，支持单标签短主机名直连。
-- **双保险子网路由 (`preferred_by` + 静态 CIDR 兜底)**：采用 `preferred_by: ["tailscale-ep"]` 动态匹配 Tailscale 虚拟内网及远端子网路由，同时内置 `100.64.0.0/10` 与 `fd7a:115c:a1e0::/48` 静态 CIDR 兜底，杜绝端点启动/重连时因 NetMap 尚未同步导致流量泄漏至代理（VLESS）节点；OpenWrt / Linux 同时支持异地设备入站访问局域网子网路由（自动用户态 SNAT 转发）。
+- **动态子网路由 (`preferred_by`)**：移除硬编码的 `100.64.0.0/10` 等冗余规则，统一由 `preferred_by: ["tailscale-ep"]` 动态匹配 Tailscale 虚拟内网及所有远端子网路由；OpenWrt / Linux 同时支持异地设备入站访问局域网子网路由（自动用户态 SNAT 转发）。
 - **全动态传参注入**：支持按需注入 `control_url`、`hostname`、`auth_key`、`advertise_routes` 及 ACL 标签（如 `tag:admin`、`tag:share`、`tag:relay`、`tag:user`）。
 
 ### 使用方法

@@ -69,19 +69,21 @@ foreach ($cfg in $tsConfigs) {
         throw "$cfg 的 dns.rules 缺失 preferred_by: ts-dns 规则"
     }
 
-    # 3. 验证已移除重复冗余的 Tailscale 路由规则，仅保留 preferred_by 动态路由，且 sniff 排除了 tailscale-ep
-    $prefRoute = $json.route.rules | Where-Object { $_.preferred_by -contains "tailscale-ep" -and $_.outbound -eq "tailscale-ep" }
-    if ($null -eq $prefRoute) {
-        throw "$cfg 缺失 preferred_by: [tailscale-ep] 路由规则"
+    # 3. 验证 Tailscale 双保险路由规则（preferred_by 动态匹配 + 100.64.0.0/10 与 fd7a:115c:a1e0::/48 静态 CIDR 兜底），且 sniff 排除
+    $tsRoute = $json.route.rules | Where-Object { $_.outbound -eq "tailscale-ep" }
+    if ($null -eq $tsRoute -or $tsRoute.type -ne "logical" -or $tsRoute.mode -ne "or") {
+        throw "$cfg 缺失 outbound: tailscale-ep 复合双保险路由规则"
+    }
+    $hasPref = $tsRoute.rules | Where-Object { $_.preferred_by -contains "tailscale-ep" }
+    $hasCidr = $tsRoute.rules | Where-Object { $_.ip_cidr -contains "100.64.0.0/10" -and $_.ip_cidr -contains "fd7a:115c:a1e0::/48" }
+    if ($null -eq $hasPref -or $null -eq $hasCidr) {
+        throw "$cfg 的 tailscale-ep 路由规则未包含 preferred_by 与静态 CIDR 双保险配置"
     }
     $sniffRule = $json.route.rules | Where-Object { $_.action -eq "sniff" }
-    $sniffExcludesTs = $sniffRule.rules | Where-Object { $_.preferred_by -contains "tailscale-ep" }
-    if ($null -eq $sniffExcludesTs) {
-        throw "$cfg 的 sniff 规则未排除 preferred_by: [tailscale-ep]"
-    }
-    $dupCidrRoute = $json.route.rules | Where-Object { $_.ip_cidr -contains "100.64.0.0/10" }
-    if ($null -ne $dupCidrRoute) {
-        throw "$cfg 仍存在冗余的 100.64.0.0/10 ip_cidr 路由规则"
+    $sniffExcludesTsPref = $sniffRule.rules | Where-Object { $_.preferred_by -contains "tailscale-ep" }
+    $sniffExcludesTsCidr = $sniffRule.rules | Where-Object { $_.ip_cidr -contains "100.64.0.0/10" }
+    if ($null -eq $sniffExcludesTsPref -or $null -eq $sniffExcludesTsCidr) {
+        throw "$cfg 的 sniff 规则未反向排除 preferred_by: [tailscale-ep] 或静态 CIDR 兜底"
     }
 
     # 3.1 验证 Sing-Box 1.14 新特性：dns.timeout 与 ali+google 并行竞态 evaluate + respond
@@ -211,7 +213,25 @@ if (epBoolEdge.relay_server_port !== 40000 || epBoolEdge.relay_server_static_end
   throw new Error('误传 relay_endpoints=true 时未正确过滤非法静态端点');
 }
 
-console.log('[OK] substore-endpoint.js 广播内网地址、接收地址、Peer Relay 节点动态开关、防 not an ip:port 规范化与 #noCache 过滤 100% 验证通过！');
+// 测试 6: 自定义 tag 动态重命名时，验证双保险路由规则、sniff 排除项与 ts-dns 规则同步更新
+global.$content = raw;
+global.$arguments = 'tag=custom-ts';
+delete require.cache[require.resolve('./scripts/substore-endpoint.js')];
+require('./scripts/substore-endpoint.js');
+const resTag = JSON.parse(global.$content);
+const epTag = resTag.endpoints[0];
+if (epTag.tag !== 'custom-ts') throw new Error('自定义 tag 未生效');
+const routeTag = resTag.route.rules.find(r => r.outbound === 'custom-ts');
+if (!routeTag) throw new Error('双保险路由规则 outbound 未同步更新为 custom-ts');
+const subPref = routeTag.rules.find(r => Array.isArray(r.preferred_by) && r.preferred_by.includes('custom-ts'));
+if (!subPref) throw new Error('双保险路由子规则 preferred_by 未同步更新为 custom-ts');
+const subCidr = routeTag.rules.find(r => Array.isArray(r.ip_cidr) && r.ip_cidr.includes('100.64.0.0/10'));
+if (!subCidr) throw new Error('双保险路由静态 CIDR 兜底子规则意外丢失');
+const sniffTag = resTag.route.rules.find(r => r.action === 'sniff');
+const sniffPref = sniffTag.rules.find(r => Array.isArray(r.preferred_by) && r.preferred_by.includes('custom-ts'));
+if (!sniffPref) throw new Error('sniff 排除项 preferred_by 未同步更新为 custom-ts');
+
+console.log('[OK] substore-endpoint.js 广播内网地址、接收地址、Peer Relay 节点动态开关、防 not an ip:port 规范化、#noCache 过滤与双保险路由同步 100% 验证通过！');
 '@
 
 node -e $nodeTest
